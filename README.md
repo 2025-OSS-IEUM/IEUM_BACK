@@ -124,3 +124,47 @@
 |config|설정 파일 수정|
 |resource|폰트, 로컬라이징 등 수정|
 
+----------------------------------------------
+
+## 🧩 A단계 (feat/env-setup) 작업 요약
+
+### 1️⃣ Flask 환경 세팅
+- Flask 기본 실행 구조(`app.py`) 작성  
+- `.env` 파일을 통한 환경 변수 관리 설정  
+- `.gitignore`에 `.env`, `__pycache__/`, `*.pyc` 추가  
+- `config.py`에서 `dotenv`를 이용한 환경 변수 로드 확인  
+- Flask 서버 실행 및 테스트 성공  
+
+---
+
+### 2️⃣ 실행 방법
+```bash
+python app.py
+브라우저에서 아래 주소 접속 👇
+
+http://
+✅ “Flask environment setup successful” 문구가 보이면 성공
+
+3️⃣ 환경 변수 (.env)
+
+DATABASE_URL=sqlite:///users.db
+SECRET_KEY=dev_secret_key
+FLASK_ENV=development
+.env는 깃허브에 올리지 않음 (.gitignore에 등록 완료)
+
+4️⃣ 브랜치 정보
+브랜치명	            용도	                비고
+feat/env-setup	|Flask 개발환경 구성	     |현재 브랜치
+develop	        |메인 개발 브랜치	         |merge 대상
+main	        |최종 배포용 브랜치	         |보호 상태
+
+5️⃣ 커밋 예시
+bash
+코드 복사
+feat: add Flask environment setup and README
+
+6️⃣ 담당자
+구분	이름	역할
+A단계	사람3	.env 관리, README 작성, 실행 테스트
+
+
