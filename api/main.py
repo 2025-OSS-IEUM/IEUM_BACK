@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, status # HTTPException, status 추�
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from dotenv import load_dotenv
+from app.routers import auth  # 라우터 추가
 
 # (수업 자료 02) 우리가 방금 설계한 Pydantic '데이터 모델'을 임포트
 from .models import UserIn, UserInDB
@@ -21,6 +22,9 @@ MONGO_URI = os.getenv("MONGO_URI")
 client = AsyncIOMotorClient(MONGO_URI)
 db = client.get_database("ieum_db") # .env의 DB 이름과 일치
 users_collection = db.get_collection("users") # 'users' 컬렉션(테이블) 사용
+
+# Auth 라우터 연결
+app.include_router(auth.router)
 
 @app.on_event("startup")
 async def startup_event():
