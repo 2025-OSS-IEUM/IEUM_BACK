@@ -1,7 +1,5 @@
-user = User(
-    email="admin@example.com",
-    username="admin",
-    password=hash_password("admin123"),
-    level=1,
-    exp=0
-)
+Flask==3.1.2
+Flask-SQLAlchemy==3.1.1
+python-dotenv==1.0.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1

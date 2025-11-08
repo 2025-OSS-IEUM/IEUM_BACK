@@ -170,25 +170,36 @@ A단계	사람3	.env 관리, README 작성, 실행 테스트
 ---------
 
 🧩 A단계 (feat/auth-hash) 작업 요약
+1️⃣ 비밀번호 해시 및 기본 관리자 계정 생성
 
-1️⃣ 비밀번호 해시 및 기본 관리자 계정 생성  
-- `security.py`: bcrypt 기반 비밀번호 해시 및 검증 로직 구현  
-- `seed_user.py`: 기본 관리자 계정(admin@example.com / admin123) 자동 생성  
-- `models.py`: User 모델 정의 (ORM 기반, SQL문 직접 사용 X)  
-- `requirements.txt`: Flask, SQLAlchemy, Passlib, Dotenv 추가  
-- README 갱신 (실행 방법 및 기본 계정 정보 추가)
+security.py: bcrypt 기반 비밀번호 해시 및 검증 로직 구현
 
-2️⃣ 실행 방법  
-1. 패키지 설치  
+seed_user.py: 기본 관리자 계정(admin@example.com / admin123) 자동 생성
+
+models.py: User 모델 정의 (ORM 기반, SQL문 직접 사용 X)
+
+requirements.txt: Flask, SQLAlchemy, Passlib, Dotenv 추가
+
+README.md: 실행 방법 및 기본 계정 정보 추가
+
+2️⃣ 실행 방법
+# 1. 패키지 설치
 pip install -r requirements.txt
 
-
-2. DB 테이블 생성  
+# 2. DB 테이블 생성
 python app.py
 
-
-3. 기본 관리자 계정 생성  
+# 3. 기본 관리자 계정 생성
 python seed_user.py
 
 
-✅ 실행 후, DB에 `admin@example.com / admin123` 계정이 bcrypt 해시로 저장됩니다.
+✅ 실행 후, DB에 admin@example.com / admin123 계정이 bcrypt 해시로 저장됩니다.
+
+⚙️ 초기 실행 시 주의
+
+최초 실행 시 아래 코드 한 번만 실행해야 합니다 👇
+
+from app import app, db
+from models import User
+with app.app_context():
+    db.create_all()
