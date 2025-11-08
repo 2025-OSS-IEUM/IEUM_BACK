@@ -1,0 +1,32 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  # 1. FastAPI 애플리케이션 서비스
+  api:
+    build: . # <--- 여기를 한 줄로 '교체'했습니다. (unsupported config value 오류 해결)
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    # (개발용) --reload 옵션으로 코드 변경 시 자동 재시작
+    volumes:
+      - ./api:/app # 로컬의 ./api 폴더를 컨테이너의 /app 폴더와 동기화
+    ports:
+      - "8000:8000" # 호스트 8000번 포트를 컨테이너 8000번 포트에 연결
+    env_file:
+      - ./.env # 루트 디렉토리의 .env 파일에서 환경변수를 읽어옵니다.
+    depends_on:
+      - db # db 서비스가 실행된 후에 api 서비스를 시작합니다.
+
+  # 2. MongoDB 데이터베이스 서비스
+  db:
+    image: mongo:6.0 # MongoDB 6.0 버전을 사용 (최신 버전 사용 가능)
+    ports:
+      - "27017:27017" # 호스트 27017 포트를 컨테이너 27017에 연결
+    environment:
+      # .env 파일에서 관리자 계정 정보를 읽어옵니다.
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db # MongoDB 데이터를 호스트에 영구 저장 (볼륨)
+
+volumes:
+  mongo_data: # 데이터 영구 저장을 위한 Named Volume 정의

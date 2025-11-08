@@ -1,0 +1,5 @@
+# api/requirements.txt
+fastapi
+uvicorn[standard]
+motor # (중요) MongoDB용 비동기(async) 드라이버
+python-dotenv # .env 파일을 읽기 위해 (로컬 실행 시)
