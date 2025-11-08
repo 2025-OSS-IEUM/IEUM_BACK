@@ -1,0 +1,7 @@
+user = User(
+    email="admin@example.com",
+    username="admin",
+    password=hash_password("admin123"),
+    level=1,
+    exp=0
+)

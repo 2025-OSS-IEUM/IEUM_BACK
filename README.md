@@ -124,3 +124,71 @@
 |config|설정 파일 수정|
 |resource|폰트, 로컬라이징 등 수정|
 
+----------------------------------------------
+
+## 🧩 A단계 (feat/env-setup) 작업 요약
+
+### 1️⃣ Flask 환경 세팅
+- Flask 기본 실행 구조(`app.py`) 작성  
+- `.env` 파일을 통한 환경 변수 관리 설정  
+- `.gitignore`에 `.env`, `__pycache__/`, `*.pyc` 추가  
+- `config.py`에서 `dotenv`를 이용한 환경 변수 로드 확인  
+- Flask 서버 실행 및 테스트 성공  
+
+---
+
+### 2️⃣ 실행 방법
+```bash
+python app.py
+브라우저에서 아래 주소 접속 👇
+
+http://
+✅ “Flask environment setup successful” 문구가 보이면 성공
+
+3️⃣ 환경 변수 (.env)
+
+DATABASE_URL=sqlite:///users.db
+SECRET_KEY=dev_secret_key
+FLASK_ENV=development
+.env는 깃허브에 올리지 않음 (.gitignore에 등록 완료)
+
+4️⃣ 브랜치 정보
+브랜치명	            용도	                비고
+feat/env-setup	|Flask 개발환경 구성	     |현재 브랜치
+develop	        |메인 개발 브랜치	         |merge 대상
+main	        |최종 배포용 브랜치	         |보호 상태
+
+5️⃣ 커밋 예시
+bash
+코드 복사
+feat: add Flask environment setup and README
+
+6️⃣ 담당자
+구분	이름	역할
+A단계	사람3	.env 관리, README 작성, 실행 테스트
+
+---------
+
+🧩 A단계 (feat/auth-hash) 작업 요약
+
+1️⃣ 비밀번호 해시 및 기본 관리자 계정 생성  
+- `security.py`: bcrypt 기반 비밀번호 해시 및 검증 로직 구현  
+- `seed_user.py`: 기본 관리자 계정(admin@example.com / admin123) 자동 생성  
+- `models.py`: User 모델 정의 (ORM 기반, SQL문 직접 사용 X)  
+- `requirements.txt`: Flask, SQLAlchemy, Passlib, Dotenv 추가  
+- README 갱신 (실행 방법 및 기본 계정 정보 추가)
+
+2️⃣ 실행 방법  
+1. 패키지 설치  
+pip install -r requirements.txt
+
+
+2. DB 테이블 생성  
+python app.py
+
+
+3. 기본 관리자 계정 생성  
+python seed_user.py
+
+
+✅ 실행 후, DB에 `admin@example.com / admin123` 계정이 bcrypt 해시로 저장됩니다.
