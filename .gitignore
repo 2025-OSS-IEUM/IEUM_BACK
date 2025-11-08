@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files
+.env
+*.env
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# OS system files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+docker-compose.override.yml
