@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+motor # (중요) MongoDB용 비동기(async) 드라이버
+python-dotenv # .env 파일을 읽기 위해 (로컬 실행 시)
+
+pymongo # motor가 의존하며, ObjectId(BSON)를 사용하기 위해 명시
+pydantic[email] # EmailStr 같은 이메일 유효성 검사를 위해
+passlib[bcrypt] # (중요) 비밀번호 해싱(암호화)을 위해
