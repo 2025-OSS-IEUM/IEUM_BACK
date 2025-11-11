@@ -1,4 +1,4 @@
-# Python
+# Python 관련
 __pycache__/
 *.pyc
 *.pyo
@@ -8,7 +8,7 @@ __pycache__/
 .env
 *.env
 
-# Editor / IDE
+# Editor / IDE 설정
 .vscode/
 .idea/
 
@@ -16,6 +16,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Docker
+# Docker 관련
 *.log
 docker-compose.override.yml
