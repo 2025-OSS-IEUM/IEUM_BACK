@@ -1,12 +1,21 @@
-# 환경 변수 파일
-.env
-
 # Python 관련
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# VS Code 설정
+# Environment files
+.env
+*.env
+
+# Editor / IDE 설정
 .vscode/
+.idea/
+
+# OS system files
+.DS_Store
+Thumbs.db
 
 # Docker 관련
 *.log
+docker-compose.override.yml

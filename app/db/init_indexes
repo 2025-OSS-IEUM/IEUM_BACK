@@ -1,0 +1,65 @@
+# app/db/init_indexes.py
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo import ASCENDING
+from app.db.mongo import get_db
+from app.utils.errors import err
+
+COLL = "hazard_reports"
+
+# Mongo 컬렉션 레벨 간단 검증(서버에서 강제하려면 validator 추가도 가능)
+JSON_SCHEMA = {
+    "bsonType": "object",
+    "required": ["type", "description", "location", "severity", "status"],
+    "properties": {
+        "type":        {"enum": ["sidewalk_damage", "construction", "missing_crosswalk", "no_tactile", "etc"]},
+        "description": {"bsonType": "string"},
+        "location":    {
+            "bsonType": "object",
+            "required": ["type", "coordinates"],
+            "properties": {
+                "type": {"enum": ["Point"]},
+                "coordinates": {
+                    "bsonType": "array",
+                    "items": [{"bsonType": "double"}, {"bsonType": "double"}],
+                    "minItems": 2,
+                    "maxItems": 2
+                }
+            }
+        },
+        "photoUrls": {"bsonType": ["array"]},
+        "detectedAt": {"bsonType": ["date", "null"]},
+        "severity": {"enum": ["low", "medium", "high"]},
+        "status":   {"enum": ["pending_review", "approved", "resolved"]}
+    }
+}
+
+async def ensure_indexes(db: AsyncIOMotorDatabase | None = None) -> dict:
+    """
+    hazard_reports 컬렉션이 없으면 생성하고,
+    2dsphere(location), 시간/상태 보조 인덱스를 보장.
+    """
+    try:
+        db = db or get_db()
+
+        # 컬렉션 생성(기 존재 시 pass)
+        if COLL not in await db.list_collection_names():
+            await db.create_collection(
+                COLL,
+                validator={"$jsonSchema": JSON_SCHEMA},
+                validationLevel="moderate",
+            )
+
+        coll = db[COLL]
+
+        # 공간 인덱스: MongoDB의 GIST에 해당하는 2dsphere
+        await coll.create_index([("location", "2dsphere")], name="idx_location_2dsphere")
+
+        # 조회 보조 인덱스(필요에 따라)
+        await coll.create_index([("detectedAt", ASCENDING)], name="idx_detectedAt")
+        await coll.create_index([("status", ASCENDING)],     name="idx_status")
+
+        return {"message": "indexes ensured", "collection": COLL}
+
+    except Exception as e:
+        # 명세서 스타일 에러 포맷
+        return err("SERVICE_UNAVAILABLE", "인덱스 생성 중 오류", str(e))
