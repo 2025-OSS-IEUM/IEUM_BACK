@@ -129,3 +129,20 @@
 |config|설정 파일 수정|
 |resource|폰트, 로컬라이징 등 수정|
 
+---
+
+## 📁 A-1 User 테이블 설계
+
+### 🔹 A-1. 로그인 / 회원가입 - ① User 테이블 설계 (`feat/user-model`)
+- FastAPI와 MongoDB 연동을 위한 기본 구조 설계
+- User 컬렉션 스키마 정의 (`email`, `username`, `password_hash`, `level`, `exp`, `created_at`)
+- 환경 변수(`.env`)를 통한 MongoDB 연결 (`MONGO_URI`)
+- `.gitignore` 설정으로 `.env` 보안 유지
+
+#### 📂 관련 파일
+- `api/db/database.py` → MongoDB 연결
+- `api/db/models/user_model.py` → User 스키마 정의
+
+#### 💾 .env 예시
+```bash
+MONGO_URI=mongodb://mongo:27017/ieum_db

@@ -1,10 +1,22 @@
-# 환경 변수 파일 (보안 정보)
-.env
-
 # Python 관련
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# 가상환경
+# Environment files
 venv/
-.env/
+.env
+*.env
+
+# Editor / IDE 설정
+.vscode/
+.idea/
+
+# OS system files
+.DS_Store
+Thumbs.db
+
+# Docker 관련
+*.log
+docker-compose.override.yml
