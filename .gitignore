@@ -1,7 +1,4 @@
-# Environment
-.env
-
-# Python cache
+# Python 관련
 __pycache__/
 *.pyc
 *.pyo
@@ -14,3 +11,19 @@ venv/
 # IDE settings
 .vscode/
 .idea/
+# Environment files
+venv/
+.env
+*.env
+
+# Editor / IDE 설정
+.vscode/
+.idea/
+
+# OS system files
+.DS_Store
+Thumbs.db
+
+# Docker 관련
+*.log
+docker-compose.override.yml
