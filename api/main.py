@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from dotenv import load_dotenv
 from passlib.context import CryptContext
+from app.routers import auth  # 라우터 추가
 
 # (1) Pydantic 모델
 from .models import UserIn, UserInDB
@@ -21,6 +22,9 @@ MONGO_URI = os.getenv("MONGO_URI")
 client = AsyncIOMotorClient(MONGO_URI)
 db = client.get_database("ieum_db")
 users_collection = db.get_collection("users")
+
+# Auth 라우터 연결
+app.include_router(auth.router)
 
 @app.on_event("startup")
 async def startup_event():
