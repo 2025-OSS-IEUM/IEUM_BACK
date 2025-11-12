@@ -129,6 +129,37 @@
 |config|설정 파일 수정|
 |resource|폰트, 로컬라이징 등 수정|
 
+## 📌 Current Stage
+- FastAPI 앱 구조 세팅 완료 (A-2)
+- 주요 라우터 및 스키마 뼈대 구성
+- 오류 코드 표는 Notion에 별도 정리됨
+
+---
+
+## 🧩 Implemented by A(2번째)
+
+### ✅ 1. FastAPI 구조 세팅
+- `api/main.py` 기본 앱 설정
+- `core/config.py` 생성 및 `.env` 환경 변수 로드 구조 완성
+- `__init__.py` 추가로 패키지 인식 가능하도록 수정
+
+### ✅ 2. Router 구성
+- `/auth`, `/users`, `/internal` 라우터 생성 및 등록  
+  (FastAPI `APIRouter` 기반, 503 상태코드 placeholder 사용)
+
+### ✅ 3. Schemas 정의
+- `schemas/auth.py`: 회원가입, 로그인 요청·응답 모델 정의  
+- `schemas/user.py`: 사용자 프로필·수정·삭제 응답 모델 정의  
+
+### ✅ 4. Models (MongoDB용)
+- `db/models/user_model.py` 작성  
+  → `UserIn`, `UserInDB`, `AccessibilitySettings` 등 포함  
+
+### ✅ 5. Git 관리
+- `.gitignore`에 `.env` 추가  
+- 구조 파일만 커밋, 환경 변수 파일 제외  
+
+---
 ---
 
 ## 📁 A-1 User 테이블 설계
