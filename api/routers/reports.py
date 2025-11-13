@@ -1,15 +1,25 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from datetime import datetime
-from app.db.mongo import get_db
-from app.utils.errors import err
-from api.schemas.reports_schema import ReportCreate, ReportResponse  # 추가됨
+
+from ..core.core import reports_collection
+from ..utils.errors import err
+from ..schemas.reports_schema import ReportCreate, ReportResponse
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
+from fastapi import APIRouter, status
+from datetime import datetime
+
+from ..core.core import reports_collection
+from ..utils.errors import err
+from ..schemas.reports_schema import ReportCreate, ReportResponse
+
+router = APIRouter(prefix="/reports", tags=["Reports"])
+
+
 @router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
 async def create_report(report: ReportCreate):
-    db = get_db()
-    collection = db["hazard_reports"]
+    collection = reports_collection  # ← get_db() 대신 core에서 직접 가져옴
 
     try:
         # 좌표 유효성 검사
@@ -34,6 +44,10 @@ async def create_report(report: ReportCreate):
 
         # 삽입된 문서 조회
         inserted = await collection.find_one({"_id": result.inserted_id})
+        if not inserted:
+            return err("DB_READ_FAILED", "Inserted document could not be retrieved")
+
+        # ObjectId → 문자열 변환
         inserted["id"] = str(inserted["_id"])
         del inserted["_id"]
 
