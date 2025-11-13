@@ -1,20 +1,21 @@
-from fastapi import APIRouter, status, Query  # Query 추가
+from fastapi import APIRouter, status, Query, HTTPException, Body
 from datetime import datetime
-from typing import List, Optional  # List, Optional 추가
+from typing import List, Optional
+from bson import ObjectId
 
-from app.db.mongo import get_db
-from app.utils.errors import err
+# 1. (FIXED) Import DB collection directly from db/database.py
+# (get_db() 대신, db/database.py에 정의된 collection 객체를 직접 가져옵니다)
+from db.database import reports_collection
 
-# (중요) 스키마 파일에서 모델 및 타입들을 가져옵니다.
-from api.schemas.reports_schema import (
+# 2. (FIXED) Import schemas from 'schemas' (root), not 'api.schemas' or 'app.models'
+from schemas.report_schema import (
     ReportCreate,
     ReportResponse,
     HazardType,
     Severity,
     Status,
 )
-# 만약 위 import가 오류나면, 이전에 보여주신 파일 경로를 사용하세요:
-# from app.models.hazard_report import HazardType, Severity, Status
+# (참고: core.utils.PyObjectId는 현재 이 파일에서 사용되지 않으므로 제거했습니다.)
 
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
@@ -22,46 +23,73 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
 
 # ===============================
 # 📌 (B-2) POST /reports 
+# (Error handling updated to use HTTPException)
 # ===============================
 @router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
 async def create_report(report: ReportCreate):
-    db = get_db()
-    collection = db["hazard_reports"]
-
+    """(B-2) 위험/불편사항 제보(Report) 생성"""
+    
+    # (FIXED) Use the imported 'reports_collection' directly
     try:
         # 좌표 유효성 검사
         if len(report.location.coordinates) != 2:
-            return err("VALIDATION_ERROR", "Invalid coordinates: must contain [lng, lat]")
+            # (FIXED) Use HTTPException for validation errors
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Invalid coordinates: must contain [lng, lat]"
+            )
 
         # 중복 제보 확인 (같은 좌표 + 타입)
-        existing = await collection.find_one({
+        existing = await reports_collection.find_one({
             "location.coordinates": report.location.coordinates,
             "type": report.type
         })
         if existing:
-            return err("DUPLICATE_REPORT", "Report already exists for this location and type")
+            # (FIXED) Use HTTPException for duplicate errors
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, 
+                detail="Report already exists for this location and type"
+            )
 
         # MongoDB에 데이터 삽입
-        new_doc = report.dict()
+        # (FIXED) Use Pydantic v2's .model_dump() instead of .dict()
+        new_doc = report.model_dump()
         new_doc["createdAt"] = datetime.utcnow()
 
-        result = await collection.insert_one(new_doc)
+        result = await reports_collection.insert_one(new_doc)
         if not result.inserted_id:
-            return err("DB_INSERT_FAILED", "Failed to insert report into database")
+            # (FIXED) Use HTTPException for DB errors
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail="Failed to insert report into database"
+            )
 
         # 삽입된 문서 조회
-        inserted = await collection.find_one({"_id": result.inserted_id})
-        inserted["id"] = str(inserted["_id"])  # _id -> id 변환
-        del inserted["_id"]
+        inserted = await reports_collection.find_one({"_id": result.inserted_id})
+        
+        if not inserted:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail="Failed to retrieve newly created report"
+            )
+            
 
+        # _id -> id 변환 (ReportResponse 스키마에 맞게)
+        inserted["id"] = str(inserted["_id"])
+        
         return inserted
 
     except Exception as e:
-        return err("UNKNOWN_ERROR", "Unexpected server error", str(e))
+        # (FIXED) Use HTTPException for unknown errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Unexpected server error: {e}"
+        )
 
 
 # ==================================
 # 📌 (B-3) GET /reports 
+# (Error handling updated to use HTTPException)
 # ==================================
 @router.get("/", response_model=List[ReportResponse], status_code=status.HTTP_200_OK)
 async def get_reports_by_bbox_and_filters(
@@ -79,13 +107,9 @@ async def get_reports_by_bbox_and_filters(
     # 3. 페이징
     limit: int = Query(100, description="최대 반환 개수", ge=1, le=1000)
 ):
-    """
-    Bbox 및 필터 기준으로 위험/불편사항 제보(Report) 조회
-    - 2dsphere 인덱스를 활용한 $geoWithin 쿼리 사용
-    """
-    db = get_db()
-    collection = db["hazard_reports"]
-
+    """(B-3) Bbox 및 필터 기준으로 위험/불편사항 제보(Report) 조회"""
+    
+    # (FIXED) Use the imported 'reports_collection' directly
     try:
         # 1. 기본 필터 쿼리 구성 (type, severity, status)
         filter_query = {}
@@ -97,7 +121,6 @@ async def get_reports_by_bbox_and_filters(
             filter_query["status"] = status
 
         # 2. Bbox 기반 MongoDB 공간 쿼리 ($geoWithin, $box) 추가
-        # $box는 [ [bottom_left_lon, bottom_left_lat], [top_right_lon, top_right_lat] ]
         filter_query["location"] = {
             "$geoWithin": {
                 "$box": [
@@ -108,17 +131,20 @@ async def get_reports_by_bbox_and_filters(
         }
 
         # 3. MongoDB에서 쿼리 실행 (2dsphere 인덱스 활용)
-        cursor = collection.find(filter_query).limit(limit)
+        cursor = reports_collection.find(filter_query).limit(limit)
         reports = await cursor.to_list(length=limit)
 
         # 4. _id -> id 변환 (POST와 동일한 응답 스키마를 맞추기 위해)
         processed_reports = []
         for report in reports:
             report["id"] = str(report["_id"])
-            del report["_id"]
             processed_reports.append(report)
         
         return processed_reports
 
     except Exception as e:
-        return err("UNKNOWN_ERROR", "Failed to retrieve reports", str(e))
+        # (FIXED) Use HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Failed to retrieve reports: {e}"
+        )

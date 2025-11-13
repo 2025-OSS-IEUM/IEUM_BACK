@@ -43,7 +43,6 @@ class SignupRequest(BaseModel):
         ..., 
         min_length=4,  # API 명세서 기준
         max_length=20, 
-        pattern=r'^[a-z0-9_]{4,20}$', # API 명세 (1) 규칙 반영
         example="ieum_user01"
     )
     email: EmailStr = Field(..., example="user@example.com")
@@ -52,7 +51,6 @@ class SignupRequest(BaseModel):
     password: str = Field(
         ..., 
         min_length=8, # API 명세서 기준
-        pattern=r'^(?=.*[!@#$%^&*()\[\]{}\-_=+\\|;:\'",.<>/?~]).{8,}$',
         example="P@ssw0rd!"
     )
     # API 명세 (1)의 'passwordConfirm'
@@ -117,3 +115,58 @@ class TokenPayload(BaseModel):
     # 'sub' (subject)는 토큰의 주체를 나타냅니다.
     # 로그인 방식이 'email'이므로 sub도 'email'로 하는 것이 일관성 있습니다.
     sub: EmailStr # email
+
+# --- DB 저장을 위한 UserInDB 모델 ---
+class UserInDB(BaseModel):
+    username: str
+    email: EmailStr
+    hashed_password: str # <-- 비밀번호가 해시되어 저장됨
+    name: str | None = None
+    disabilityType: DisabilityType
+    createdAt: datetime = Field(default_factory=datetime.now)
+    updatedAt: datetime = Field(default_factory=datetime.now)
+    is_active: bool = True
+    
+# --- API 명세 (17) 아이디/이메일 중복 확인 응답 ---
+class CheckAvailabilityResponse(BaseModel):
+    available: bool
+    message: str | None = None
+
+
+# --- API 명세 (3) 아이디 찾기 요청 ---
+class UsernameLookupRequest(BaseModel):
+    email: EmailStr
+
+
+# --- API 명세 (3) 아이디 찾기 응답 ---
+class UsernameLookupResponse(BaseModel):
+    username: str
+
+
+# --- API 명세 (4) 비밀번호 재설정 코드 발송 요청 ---
+class PasswordResetRequest(BaseModel):
+    username: str
+
+
+# --- API 명세 (4) 비밀번호 재설정 코드 발송 응답 ---
+class PasswordResetResponse(BaseModel):
+    expiresIn: int
+
+
+# --- API 명세 (5) 비밀번호 재설정 확정 요청 ---
+class PasswordResetConfirmRequest(BaseModel):
+    username: str
+    code: str
+    newPassword: str = Field(..., min_string=8)
+    newPasswordConfirm: str
+
+    @model_validator(mode='after')
+    def check_passwords_match(self):
+        if self.newPassword != self.newPasswordConfirm:
+            raise ValueError('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.')
+        return self
+
+
+# --- API 명세 (5) 비밀번호 재설정 확정 응답 ---
+class PasswordResetConfirmResponse(BaseModel):
+    message: str = "비밀번호가 성공적으로 재설정되었습니다."
