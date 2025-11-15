@@ -35,29 +35,49 @@ async def get_auth_status():
     """Auth 라우터 연결 상태 확인용"""
     return {"message": "Auth router active"}
 
-@router.post("/signup", 
-            response_model=UserInDB,
-            status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/signup",
+    response_model=UserInDB,
+    status_code=status.HTTP_201_CREATED
+)
 async def signup(user_in: SignupRequest):
-    """(API 명세서 1. (1) 회원 가입)"""
-    # core.py의 users_collection 사용
-    existing_user = await users_collection.find_one({"username": user_in.username})
-    if existing_user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 사용 중인 아이디입니다.")
-    
-    existing_email = await users_collection.find_one({"email": user_in.email})
-    if existing_email:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 가입된 이메일 주소입니다.")
 
+    # 1) 아이디 / 이메일 중복 확인
+    if await users_collection.find_one({"username": user_in.username}):
+        raise HTTPException(409, "이미 사용 중인 아이디입니다.")
+    if await users_collection.find_one({"email": user_in.email}):
+        raise HTTPException(409, "이미 가입된 이메일 주소입니다.")
+
+    # 2) 비밀번호 해싱
     hashed_password = hash_password(user_in.password)
-    user_data = user_in.model_dump(exclude={"password"})
-    user_data["hashed_password"] = hashed_password
-    
-    new_user = UserInDB(**user_data)
-    result = await users_collection.insert_one(new_user.model_dump(by_alias=True))
-    created_user = await users_collection.find_one({"_id": result.inserted_id})
-    return UserInDB(**created_user)
 
+    # 3) SignupRequest → DB 저장용 데이터로 매핑(clean)
+    user_data = {
+        "username": user_in.username,
+        "email": user_in.email,
+
+        # passwordConfirm, consent는 저장 ❌ → 버림
+        "hashed_password": hashed_password,
+
+        "name": user_in.name,
+        "disabilityType": user_in.disabilityType,   # camelCase 그대로 저장해도 됨
+
+        # UserInDB와 일치하도록 필드 생성
+        "createdAt": datetime.now(),
+        "updatedAt": datetime.now(),
+        "is_active": True
+    }
+
+    # 4) DB 스키마(UserInDB)에 맞게 모델 인스턴스 생성
+    new_user = UserInDB(**user_data)
+
+    # 5) MongoDB 저장
+    result = await users_collection.insert_one(new_user.model_dump())
+    created = await users_collection.find_one({"_id": result.inserted_id})
+
+    # 6) UserInDB로 응답 직렬화
+    return UserInDB(**created)
+    
 @router.post("/login", response_model=LoginResponse)
 async def login(login_data: LoginRequest):
     """(API 명세서 1. (2) 로그인)"""

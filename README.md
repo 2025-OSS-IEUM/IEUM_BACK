@@ -199,3 +199,119 @@ IEUM_BACK/
  ├── docker-compose.yml
  ├── requirements.txt
  └── .env   (⚠️ git에 포함 ❌)
+
+ #####
+ README 업데이트 내용 (추가 섹션)
+🔧 1. Security Update: Password Hashing (bcrypt 72 bytes fix)
+
+bcrypt는 내부적으로 최대 72 bytes까지만 처리할 수 있음.
+길이가 긴 비밀번호 입력 시 발생하던 오류를 해결하기 위해
+api/core/security.py 를 아래와 같이 수정함:
+
+def hash_password(password: str) -> str:
+    password_bytes = password.encode("utf-8")
+
+    # bcrypt에서 처리 가능한 최대 길이 제한 (72 bytes)
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+        password = password_bytes.decode("utf-8", errors="ignore")
+
+    return pwd_context.hash(password)
+
+✔ 효과
+
+bcrypt ValueError 발생 제거
+
+긴 비밀번호도 안전하게 해시됨
+
+docker build 후 정상 작동 확인
+
+🗂 2. MongoDB Database 이름 통일 (ieum_db)
+
+기존 Docker 환경에서 DB 이름이 ieum / ieum_db 로 혼재되어 있어
+모든 코드 및 docker-compose 환경변수를 다음과 같이 통일함:
+
+DB_NAME=ieum_db
+
+
+FastAPI 내부에서 DB 핸들 생성:
+
+db = client.get_database("ieum_db")
+
+✔ 효과
+
+DB 탐색 및 관리 일관성 확보
+
+콘테이너/로컬 개발환경 간 불일치 제거
+
+auth/signup 데이터 insert 정상 확인
+
+🧩 3. Signup 스키마/로직 일관화
+
+validation mismatch 및 스키마 불일치로 인한 422 오류를 방지하기 위해
+다음 파일들의 스키마/로직을 통일함.
+
+포함 파일:
+
+api/schemas/auth.py
+
+api/routers/auth.py
+
+api/db/models/user_model.py
+
+변경사항 요약
+(1) SignupRequest
+
+passwordConfirm 추가
+
+consent.terms, consent.privacy required
+
+password 일치 validator 추가
+
+(2) DB 저장 모델(User)
+
+DB에는 절대 다음 필드를 저장하지 않음:
+
+password
+
+passwordConfirm
+
+저장은 아래 필드만:
+
+{
+  "username": "...",
+  "email": "...",
+  "hashed_password": "...",
+  "name": "...",
+  "disabilityType": "...",
+  "is_active": true,
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+
+🚀 4. Docker 배포 시 주의사항
+코드 변경이 있을 경우 반드시 재빌드 필요
+
+아래 파일이 변경되면 반드시 재빌드 해야 함:
+
+api/core/security.py
+
+api/schemas/*
+
+api/routers/*
+
+api/db/*
+
+requirements.txt
+
+Dockerfile
+
+재빌드 명령어
+docker compose down
+docker compose up --build -d
+
+⭐ 최종 요약 (README용 문장)
+
+비밀번호 hashing 개선(bcrypt 72 bytes 대응), MongoDB DB 이름 통일(ieum_db),
+Signup 요청/응답 스키마 정리, Docker 재빌드시 적용됨.
+코드 변경 후에는 반드시 docker compose up --build -d 로 재빌드 필요.
