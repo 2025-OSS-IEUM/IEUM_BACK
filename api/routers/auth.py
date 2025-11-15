@@ -4,20 +4,21 @@ import random
 from datetime import datetime, timedelta, timezone
 
 # 1. 의존성(Models) 가져오기
-from ..models import (
-    UserIn, UserInDB, 
+# 1. 의존성(Models) 가져오기
+# (schemas/user.py 에는 UserIn이 없으므로, auth.py에서 모두 가져옵니다)
+from schemas.auth import (
+    SignupRequest, UserInDB,
     LoginRequest, LoginResponse, UserInLoginResponse,
     CheckAvailabilityResponse, UsernameLookupRequest, UsernameLookupResponse,
     PasswordResetRequest, PasswordResetResponse,
     PasswordResetConfirmRequest, PasswordResetConfirmResponse
 )
 
-from ..core import (
-    users_collection, 
-    ACCESS_TOKEN_EXPIRE_MINUTES
-)
+from db.database import users_collection
+# (core/config.py 에서 설정값(settings)을 가져옵니다)
+from core.config import settings
 
-from ..security import (
+from core.security import (
     verify_password, 
     hash_password, 
     create_access_token, 
@@ -37,7 +38,7 @@ async def get_auth_status():
 @router.post("/signup", 
             response_model=UserInDB,
             status_code=status.HTTP_201_CREATED)
-async def signup(user_in: UserIn): 
+async def signup(user_in: SignupRequest):
     """(API 명세서 1. (1) 회원 가입)"""
     # core.py의 users_collection 사용
     existing_user = await users_collection.find_one({"username": user_in.username})
@@ -84,7 +85,7 @@ async def login(login_data: LoginRequest):
     return LoginResponse(
         accessToken=access_token,
         refreshToken=refresh_token,
-        expiresIn=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expiresIn=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=user_info
     )
 

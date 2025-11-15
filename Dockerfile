@@ -7,7 +7,7 @@ WORKDIR /app
 
 # 3. (중요) api 폴더 안의 requirements.txt 파일을 먼저 복사
 #    - 이렇게 분리하면, requirements.txt가 변경될 때만 pip install을 다시 실행 (도커 캐시 활용)
-COPY ./api/requirements.txt .
+COPY ./requirements.txt .
 
 # 4. 의존성 설치
 RUN pip install --no-cache-dir -r requirements.txt
