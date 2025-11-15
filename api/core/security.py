@@ -26,10 +26,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def hash_password(password: str) -> str:
     """
-    입력된 비밀번호를 해시하여 반환합니다.
+    bcrypt는 최대 72 bytes만 처리 가능하므로,
+    그보다 길면 잘라서 해시 오류를 방지한다.
     """
-    return pwd_context.hash(password)
+    password_bytes = password.encode("utf-8")
 
+    # 72 bytes 초과 방지
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+        password = password_bytes.decode("utf-8", errors="ignore")
+
+    return pwd_context.hash(password)
 # ==================================
 # 2. JWT 토큰 (JWT Token)
 # ==================================
