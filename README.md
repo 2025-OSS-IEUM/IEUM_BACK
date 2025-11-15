@@ -129,51 +129,73 @@
 |config|설정 파일 수정|
 |resource|폰트, 로컬라이징 등 수정|
 
-## 📌 Current Stage
-- FastAPI 앱 구조 세팅 완료 (A-2)
-- 주요 라우터 및 스키마 뼈대 구성
-- 오류 코드 표는 Notion에 별도 정리됨
+####
 
----
+📁 환경 변수 설정 (중요)
 
-## 🧩 Implemented by A(2번째)
+이 프로젝트는 Docker + FastAPI 기반이며,
+환경 변수는 반드시 .env 파일로 관리하고 git에는 포함되지 않습니다.
 
-### ✅ 1. FastAPI 구조 세팅
-- `api/main.py` 기본 앱 설정
-- `core/config.py` 생성 및 `.env` 환경 변수 로드 구조 완성
-- `__init__.py` 추가로 패키지 인식 가능하도록 수정
+1) .env 파일 생성 방법
 
-### ✅ 2. Router 구성
-- `/auth`, `/users`, `/internal` 라우터 생성 및 등록  
-  (FastAPI `APIRouter` 기반, 503 상태코드 placeholder 사용)
+루트 디렉토리(IEUM_BACK/)에 .env 파일을 새로 만들고 아래 형식대로 작성하세요:
 
-### ✅ 3. Schemas 정의
-- `schemas/auth.py`: 회원가입, 로그인 요청·응답 모델 정의  
-- `schemas/user.py`: 사용자 프로필·수정·삭제 응답 모델 정의  
+# MongoDB 관리자 계정
+MONGO_ROOT_USER=<your_root_username>
+MONGO_ROOT_PASSWORD=<your_root_password>
 
-### ✅ 4. Models (MongoDB용)
-- `db/models/user_model.py` 작성  
-  → `UserIn`, `UserInDB`, `AccessibilitySettings` 등 포함  
+# MongoDB 연결 정보
+DB_NAME=ieum
+MONGO_URI=mongodb://<your_root_username>:<your_root_password>@mongo:27017/ieum?authSource=admin
 
-### ✅ 5. Git 관리
-- `.gitignore`에 `.env` 추가  
-- 구조 파일만 커밋, 환경 변수 파일 제외  
+# JWT
+SECRET_KEY=<your_jwt_secret>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 
----
----
 
-## 📁 A-1 User 테이블 설계
+⚠️ 주의
 
-### 🔹 A-1. 로그인 / 회원가입 - ① User 테이블 설계 (`feat/user-model`)
-- FastAPI와 MongoDB 연동을 위한 기본 구조 설계
-- User 컬렉션 스키마 정의 (`email`, `username`, `password_hash`, `level`, `exp`, `created_at`)
-- 환경 변수(`.env`)를 통한 MongoDB 연결 (`MONGO_URI`)
-- `.gitignore` 설정으로 `.env` 보안 유지
+<your_root_username> / <your_root_password> / <your_jwt_secret> 은 본인이 직접 생성
 
-#### 📂 관련 파일
-- `api/db/database.py` → MongoDB 연결
-- `api/db/models/user_model.py` → User 스키마 정의
+이 값들은 절대로 GitHub에 올리면 안 됨!!
 
-#### 💾 .env 예시
-```bash
-MONGO_URI=mongodb://mongo:27017/ieum_db
+🐳 백엔드 Docker 실행 방법
+1. Docker 빌드 + 실행
+docker compose up --build
+
+
+Docker가 자동으로 두 컨테이너를 실행합니다:
+
+컨테이너	역할
+api	FastAPI 서버
+db	MongoDB 서버
+🌐 API 문서 접속 경로
+
+Docker가 실행되면 아래 주소로 접속 :
+
+http://localhost:8000/docs
+
+http://127.0.0.1:8000/docs
+
+둘 다 똑같이 Swagger UI가 열림.
+
+🔍 확인용 기본 경로
+GET /
+→ {"message": "IEUM API v1 (FastAPI + MongoDB)"}
+
+GET /internal/health
+→ DB 연결 상태 확인 가능
+
+📦 폴더 구조 (최종판)
+IEUM_BACK/
+ ├── api/
+ │    ├── main.py
+ │    ├── routers/
+ │    ├── schemas/
+ │    ├── db/
+ │    ├── services/
+ ├── Dockerfile
+ ├── docker-compose.yml
+ ├── requirements.txt
+ └── .env   (⚠️ git에 포함 ❌)
