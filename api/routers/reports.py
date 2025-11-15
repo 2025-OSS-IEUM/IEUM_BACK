@@ -73,6 +73,9 @@ async def create_report(report: ReportCreate):
         inserted["id"] = str(inserted["_id"])
         
         return inserted
+    except HTTPException as http_exc:
+        # 1. HTTPException (예: 409)을 먼저 잡아서 그대로 반환합니다.
+        raise http_exc
 
     except Exception as e:
         # (FIXED) Use HTTPException for unknown errors
