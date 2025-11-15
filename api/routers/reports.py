@@ -3,11 +3,10 @@ from datetime import datetime
 from typing import List, Optional
 from bson import ObjectId
 
-# 1. (FIXED) Import DB collection directly from db/database.py
-# (get_db() 대신, db/database.py에 정의된 collection 객체를 직접 가져옵니다)
+# 1. (FIXED) 'api/db/database.py'에서 컬렉션을 직접 가져옵니다.
 from db.database import reports_collection
 
-# 2. (FIXED) Import schemas from 'schemas' (root), not 'api.schemas' or 'app.models'
+# 2. (FIXED) 'api/schemas/report_schema.py'에서 스키마를 가져옵니다.
 from schemas.report_schema import (
     ReportCreate,
     ReportResponse,
@@ -15,15 +14,13 @@ from schemas.report_schema import (
     Severity,
     Status,
 )
-# (참고: core.utils.PyObjectId는 현재 이 파일에서 사용되지 않으므로 제거했습니다.)
-
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
 
 # ===============================
 # 📌 (B-2) POST /reports 
-# (Error handling updated to use HTTPException)
+# (Schema validator handles coordinate checks)
 # ===============================
 @router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
 async def create_report(report: ReportCreate):
@@ -31,13 +28,12 @@ async def create_report(report: ReportCreate):
     
     # (FIXED) Use the imported 'reports_collection' directly
     try:
-        # 좌표 유효성 검사
-        if len(report.location.coordinates) != 2:
-            # (FIXED) Use HTTPException for validation errors
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Invalid coordinates: must contain [lng, lat]"
-            )
+        # --- (CLEANUP) ---
+        # `if len(report.location.coordinates) != 2:`
+        # 위 좌표 검사 로직이 제거되었습니다.
+        # 'api/schemas/report_schema.py'의 GeoJSONPoint 모델에 있는
+        # '@field_validator'가 이 검사를 자동으로 수행합니다.
+        # ---------------------
 
         # 중복 제보 확인 (같은 좌표 + 타입)
         existing = await reports_collection.find_one({
@@ -52,7 +48,7 @@ async def create_report(report: ReportCreate):
             )
 
         # MongoDB에 데이터 삽입
-        # (FIXED) Use Pydantic v2's .model_dump() instead of .dict()
+        # (FIXED) Use Pydantic v2's .model_dump()
         new_doc = report.model_dump()
         new_doc["createdAt"] = datetime.utcnow()
 
@@ -73,7 +69,6 @@ async def create_report(report: ReportCreate):
                 detail="Failed to retrieve newly created report"
             )
             
-
         # _id -> id 변환 (ReportResponse 스키마에 맞게)
         inserted["id"] = str(inserted["_id"])
         
@@ -89,7 +84,7 @@ async def create_report(report: ReportCreate):
 
 # ==================================
 # 📌 (B-3) GET /reports 
-# (Error handling updated to use HTTPException)
+# (Bbox query uses the 2dsphere index)
 # ==================================
 @router.get("/", response_model=List[ReportResponse], status_code=status.HTTP_200_OK)
 async def get_reports_by_bbox_and_filters(
