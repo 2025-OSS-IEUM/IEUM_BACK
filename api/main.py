@@ -1,6 +1,9 @@
+from routers import internal 
 from fastapi import FastAPI
 from db.database import client, users_collection  # DB 객체
 from routers import auth, reports, users         # 라우터 임포트
+from routers import route
+from routers import safe_route         # D 뼈대
 
 app = FastAPI()
 
@@ -10,7 +13,11 @@ app = FastAPI()
 app.include_router(auth.router)
 app.include_router(reports.router)
 app.include_router(users.router)
+app.include_router(route.router)
+app.include_router(internal.router)     
+app.include_router(safe_route.router)   # D 뼈대
 
+# 라우터 등록 필수입니다
 
 # ---------------------------------
 # 🔥 애플리케이션 시작 이벤트

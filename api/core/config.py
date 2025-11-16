@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # (FIXED) .env의 ACCESS_TOKEN_EXPIRE_MINUTES를 읽어오도록 선언
     ACCESS_TOKEN_EXPIRE_MINUTES: int 
 
+    # 카카오 API 키 .env에서 읽어옴
+    KAKAO_API_KEY: str
+
     class Config:
         env_file = ".env"  # 환경 변수 파일 지정
         env_file_encoding = "utf-8"
