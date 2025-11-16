@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from db.database import reports_collection
-from schemas.report_schema import (
+from schemas.report_schema import (  # "safe_route_schema" -> 다시 "report_schema"로!
     ReportCreate,
     ReportResponse,
     HazardType,
