@@ -5,6 +5,7 @@
 
 from fastapi import HTTPException
 
+
 class APIException(HTTPException):
     """
     모든 API 오류를 표준화된 구조로 반환하는 커스텀 예외 클래스.
@@ -121,16 +122,9 @@ class ErrorCodes:
         "서버 내부 처리 오류 (DB 업데이트 실패 등)"
     )
 
-    # --- 제보 관련 ---
-    REPORT_ALREADY_EXISTS = (
-        "REPORT_ALREADY_EXISTS",
-        409,
-        "해당 위치와 유형의 제보가 이미 존재합니다."
-    )
-
     SERVICE_UNAVAILABLE = (
         "SERVICE_UNAVAILABLE",
-        503, 
+        503,
         "서버 또는 데이터베이스 오류입니다."
     )
     
@@ -168,4 +162,30 @@ class ErrorCodes:
         "ERR_CONFLICT",
         409,
         "이미 동일 상태로 설정되어 있음"
+    )
+
+
+    # --- 경로(Route) 관련 ---
+    ROUTE_INVALID_COORDINATES = (
+        "ROUTE_INVALID_COORDINATES",
+        400,
+        "출발지 또는 도착지 좌표가 올바르지 않습니다."
+    )
+
+    ROUTE_NOT_FOUND = (
+        "ROUTE_NOT_FOUND",
+        404,
+        "요청한 위치 사이에 유효한 경로를 찾을 수 없습니다."
+    )
+
+    ROUTE_API_UNAVAILABLE = (
+        "ROUTE_API_UNAVAILABLE",
+        503,
+        "외부 경로 서비스가 현재 응답하지 않습니다. 잠시 후 다시 시도해주세요."
+    )
+
+    ROUTE_PARSE_FAILED = (
+        "ROUTE_PARSE_FAILED",
+        500,
+        "경로 데이터를 처리하는 중 내부 오류가 발생했습니다."
     )

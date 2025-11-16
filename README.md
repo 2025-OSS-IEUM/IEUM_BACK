@@ -349,3 +349,147 @@ raise_error(ErrorCodes.EMAIL_ALREADY_EXISTS)
   "error": "EMAIL_ALREADY_EXISTS",
   "message": "이미 사용 중인 이메일입니다."
 }
+
+
+-----
+
+⭐ IEUM – Kakao REST API Key 설정 가이드 (README용)
+🔐 Kakao Directions API 사용 방식 안내
+
+우리 IEUM 프로젝트는 Kakao Directions API(경로 탐색) 를 사용합니다.
+API 호출량 제한 및 보안 문제 때문에 모든 팀원이 각자 본인의 REST API 키를 발급해서 사용해야 합니다.
+
+아래 과정을 따라 자신의 Kakao REST API Key를 설정하세요.
+
+1) Kakao Developers 회원가입 및 로그인
+
+🔗 https://developers.kakao.com/
+
+카카오 계정으로 로그인합니다.
+
+2) 새 애플리케이션 생성
+
+좌측 메뉴 → 내 애플리케이션 → 애플리케이션 추가하기
+
+이름은 자유롭게 입력
+예: IEUM-개발용-홍길동
+
+애플리케이션이 생성되면
+REST API 키를 확인할 수 있습니다.
+
+3) REST API 키 발급/확인
+
+경로:
+내 애플리케이션 → (내 앱 선택) → 앱 설정 → 일반 → 앱 키
+
+여기서 REST API 키 값을 복사합니다.
+
+4) .env 파일 생성 (프로젝트 루트)
+
+프로젝트 루트에 .env 파일을 만들고 아래처럼 입력하세요:
+
+KAKAO_REST_API_KEY=여기에_본인_키_입력
+MONGO_URI=mongodb://...
+JWT_SECRET=임의문자열
+
+
+⚠ .env.template 파일을 참고해 동일 구조로 만들어주세요.
+⚠ .env는 절대 git에 올라가지 않습니다.
+⚠ 키는 각자 본인 것만 입력하면 됩니다.
+
+5) FastAPI 서버 실행
+docker-compose up --build
+
+
+또는 로컬 개발 환경이라면:
+
+uvicorn api.main:app --reload
+
+
+정상 실행되면 Swagger UI에서 /route/ API 테스트가 가능합니다.
+
+6) 주의 사항 (보안)
+
+🔒 Kakao REST API Key는 절대 공유하지 마세요.
+🔒 깃허브에 절대 올리지 마세요.
+🔒 카카오 개발자센터에서 "앱 키 사용 이력"을 확인할 수 있으니
+이상 사용량이 보이면 즉시 재발급하세요.
+
+-----
+
+
+🚧 D 단계 (안전 점수 엔진) — Skeleton Setup
+
+본 단계에서는 E 단계의 /routes/safe API 구현을 위한 기반 엔진만 제공합니다.
+아직 실제 안전 점수 계산(Hazard Join) 로직은 포함되지 않았으며,
+Swagger에도 디버그 엔드포인트만 노출된 상태입니다.
+
+📁 추가된 파일 (3개)
+api/
+ ├─ schemas/
+ │    └── safe_route_schema.py      ← Safety Route Response 스키마 뼈대
+ │
+ ├─ services/
+ │    └── safe_route_service.py     ← 안전 점수 계산 엔진 뼈대
+ │
+ └─ routers/
+      └── safe_route.py             ← D 단계 뼈대 라우터(GET /routes/safe/debug)
+
+📌 Swagger 노출 상태 (D 단계)
+
+현재 Swagger 문서에는 아래 엔드포인트 1개만 표시됩니다:
+
+GET /routes/safe/debug
+
+
+해당 엔드포인트는 D 단계의 뼈대가 정상적으로 연결되었는지 확인하기 위한 임시 테스트용 API입니다.
+
+⚠️ 주의:
+이 API는 E 단계에서 완성될 POST /routes/safe 로 교체되며,
+D 단계가 완료되면 삭제될 예정입니다.
+
+🧩 D 단계의 역할 (핵심 요약)
+
+D 단계는 경로 후보(C단계) + Hazard 데이터(DB)를 결합하여
+각 경로의 안전 점수를 계산하는 엔진을 구축하는 단계입니다.
+
+아직 실제 계산 로직은 포함되지 않았으며, 아래 작업이 예정되어 있습니다:
+
+경로 경유 포인트(path)의 hazard 근접도 계산
+
+hazard severity/type 가중치 적용
+
+위험도 합산 → safetyScore 산출
+
+경로들 중 최적(bestRouteIndex) 반환
+
+모든 로직은 safe_route_service.py 안의 TODO로 표시되어 있습니다.
+
+🔧 main.py 변경 사항
+
+/routes/safe/debug가 Swagger에 표시되도록 다음 라우터가 등록되었습니다:
+
+from api.routers import safe_route
+app.include_router(safe_route.router)
+
+📝 E 단계에서 이어서 구현해야 할 내용
+
+E 단계에서는 다음 기능을 실제 구현하게 됩니다:
+
+POST /routes/safe API 생성
+
+C 단계의 경로 후보 + D 단계의 엔진을 결합하여
+“최종 안전 경로” 반환
+
+hazard 기반 safetyScore 실제 계산
+
+bestRouteIndex 계산
+
+Request 스키마 정의
+
+✔ 상태 요약
+단계	내용	상태
+C 단계	기본 경로 후보 /route	완료
+D 단계	안전 점수 엔진 뼈대	완료 (현재 진행 중)
+E 단계	/routes/safe 완성	다음 단계
+F 단계	실시간 안내·턴바이턴	이후 단계
