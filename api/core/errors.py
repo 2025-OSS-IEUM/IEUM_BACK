@@ -115,10 +115,10 @@ class ErrorCodes:
         "요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."
     )
 
-    SERVER_ERROR = (
-        "SERVER_ERROR",
+    ERR_SERVER_FAILURE = (
+        "ERR_SERVER_FAILURE",
         500,
-        "서버 내부 오류가 발생했습니다."
+        "서버 내부 처리 오류 (DB 업데이트 실패 등)"
     )
 
     # --- 제보 관련 ---
@@ -128,3 +128,44 @@ class ErrorCodes:
         "해당 위치와 유형의 제보가 이미 존재합니다."
     )
 
+    SERVICE_UNAVAILABLE = (
+        "SERVICE_UNAVAILABLE",
+        503, 
+        "서버 또는 데이터베이스 오류입니다."
+    )
+    
+    VALIDATION_ERROR = (
+        "VALIDATION_ERROR",
+        400,
+        "bbox 또는 중심 좌표/반경 등 형식 오류입니다."
+    )
+    
+    ERR_UNAUTHORIZED = (
+        "ERR_UNAUTHORIZED",
+        401,
+        "인증 실패 또는 토큰 누락"
+    )
+    
+    ERR_INVALID_REQUEST = (
+        "ERR_INVALID_REQUEST",
+        400,
+        "필드 누락 또는 잘못된 값 (예: status 오타)"
+    )
+
+    ERR_FORBIDDEN = (
+        "ERR_FORBIDDEN",
+        403,
+        "관리자 권한 없음"
+    )
+    
+    ERR_NOT_FOUND = (
+        "ERR_NOT_FOUND",
+        404,
+        "해당 제보(hazardId)가 존재하지 않음"
+    )
+    
+    ERR_CONFLICT = (
+        "ERR_CONFLICT",
+        409,
+        "이미 동일 상태로 설정되어 있음"
+    )
