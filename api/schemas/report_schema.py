@@ -25,7 +25,7 @@ class ReportCreate(BaseModel):
     type: HazardType = Field(..., description="Type of hazard")
     description: str = Field(..., max_length=200, description="Short description of the hazard")
     location: GeoJSONPoint
-    photoUrls: Optional[List[HttpUrl]] = Field(None, description="Optional photo URLs")
+    photoUrls: Optional[List[str]] = Field(None, description="Optional photo URLs")
     detectedAt: Optional[datetime] = Field(None, description="Time when hazard was detected")
     severity: Severity = Field("medium", description="Severity level (low/medium/high)")
     status: Status = Field("pending_review", description="Current review status")
