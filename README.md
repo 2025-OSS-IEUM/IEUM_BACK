@@ -187,7 +187,6 @@ GET /
 GET /internal/health
 → DB 연결 상태 확인 가능
 
-📦 폴더 구조 (최종판)
 IEUM_BACK/
  ├── api/
  │    ├── main.py
@@ -195,10 +194,12 @@ IEUM_BACK/
  │    ├── schemas/
  │    ├── db/
  │    ├── services/
+ │    └── requirements.txt     ← 📌 여기에 들어있음
+ │
  ├── Dockerfile
  ├── docker-compose.yml
- ├── requirements.txt
- └── .env   (⚠️ git에 포함 ❌)
+ └── .env        (⚠️ 절대 git에 포함 금지)
+
 
  #####
  README 업데이트 내용 (추가 섹션)
@@ -310,8 +311,41 @@ Dockerfile
 docker compose down
 docker compose up --build -d
 
-⭐ 최종 요약 (README용 문장)
+⭐ 요약 (README용 문장)
 
 비밀번호 hashing 개선(bcrypt 72 bytes 대응), MongoDB DB 이름 통일(ieum_db),
 Signup 요청/응답 스키마 정리, Docker 재빌드시 적용됨.
 코드 변경 후에는 반드시 docker compose up --build -d 로 재빌드 필요.
+
+----
+
+🎯 개발 방향성 (간단 설명)
+
+Schema: API 요청/응답용 (필드명은 API 친화적)
+
+Model(DB): MongoDB 저장 구조용 (필드명, 타입 자유)
+
+Router:
+
+DB 모델 ↔ 스키마 간 매핑 처리 담당
+
+에러는 errors.py의 코드만 사용 (raise_error())
+
+→ 즉, 스키마·모델 필드가 달라도 OK,
+→ 라우터에서 매핑해주면 됨.
+
+
+⚠ 에러 처리
+
+모든 라우터는 errors.py의 표준 에러 사용
+
+raise_error(ErrorCodes.EMAIL_ALREADY_EXISTS)
+
+
+응답 형식 통일:
+
+{
+  "status": 409,
+  "error": "EMAIL_ALREADY_EXISTS",
+  "message": "이미 사용 중인 이메일입니다."
+}
