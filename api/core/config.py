@@ -27,3 +27,18 @@ class Settings(BaseSettings):
 settings = Settings()
 
 print("[api/core/config.py] Settings 로드 완료.")
+
+
+HAZARD_WEIGHTS = {
+    "sidewalk_damage": 1.2,
+    "construction": 1.0,
+    "missing_crosswalk": 1.5,
+    "no_tactile": 0.8,
+    "etc": 0.5
+}
+
+SEVERITY_WEIGHTS = {
+    "low": 1.0,
+    "medium": 1.5,
+    "high": 2.0
+}

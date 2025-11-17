@@ -1,6 +1,6 @@
 from routers import internal 
 from fastapi import FastAPI
-from db.database import client, users_collection  # DB 객체
+from db.database import client, users_collection, create_db_indexes # DB 객체
 from routers import auth, reports, users         # 라우터 임포트
 from routers import route
 from routers import safe_route         # D 뼈대
@@ -39,10 +39,7 @@ async def startup_event():
             print("❌ users 컬렉션이 초기화되지 않았습니다.")
             return
 
-        # 인덱스 생성
-        await users_collection.create_index("username", unique=True)
-        await users_collection.create_index("email", unique=True)
-        print("✅ users 컬렉션 인덱스 설정 완료")
+        await create_db_indexes()
 
     except Exception as e:
         print(f"❌ MongoDB 연결 또는 인덱스 설정 실패: {e}")
