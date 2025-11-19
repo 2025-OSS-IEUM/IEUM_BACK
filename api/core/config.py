@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # 카카오 API 키 .env에서 읽어옴
     KAKAO_API_KEY: str
 
+<<<<<<< HEAD
     # 캐시(Redis) 관련 설정
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
@@ -28,6 +29,8 @@ class Settings(BaseSettings):
     # 로그 관련 설정
     LOG_LEVEL: str = "INFO"
 
+=======
+>>>>>>> 0557621a7f2205829bcfec166f52a83453873b11
     class Config:
         env_file = ".env"  # 환경 변수 파일 지정
         env_file_encoding = "utf-8"
