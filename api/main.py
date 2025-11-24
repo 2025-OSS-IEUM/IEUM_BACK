@@ -5,8 +5,17 @@ from routers import auth, reports, users         # 라우터 임포트
 from routers import route
 from routers import safe_route         # D 뼈대
 
+<<<<<<< HEAD
+from core.logging_middleware import logging_middleware
+
 app = FastAPI()
 
+app.middleware("http")(logging_middleware)
+
+=======
+app = FastAPI()
+
+>>>>>>> 0557621a7f2205829bcfec166f52a83453873b11
 # -------------------------
 # 라우터 등록
 # -------------------------
