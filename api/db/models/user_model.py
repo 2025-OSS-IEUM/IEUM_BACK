@@ -26,11 +26,12 @@ def generate_user_id():
 #    Mongo DB에 저장될 'User' 문서(Document)의 데이터 구조를 정의합니다.
 class User(BaseModel):
     
-    userId: str = Field(default_factory=generate_user_id)
+    # user_id: str = Field(default_factory=generate_user_id) // 잠시 보류 (2025-11-27)
     
     email: EmailStr
     username: str
     password_hash: str
+    phone: str
     level: int = 1
     exp: int = 0
     

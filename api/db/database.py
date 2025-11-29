@@ -39,13 +39,13 @@ async def create_db_indexes():
         
         # (B) Users 컬렉션 (고유 인덱스)
         #    -> user_model.py에서 계획한 대로
-        await users_collection.create_index([("userId", ASCENDING)], unique=True)
+        await users_collection.create_index([("user_id", ASCENDING)], unique=True)
         await users_collection.create_index([("email", ASCENDING)], unique=True)
         await users_collection.create_index([("username", ASCENDING)], unique=True)
-        print("-> 'users': Unique indexes on 'userId', 'email', 'username' ensured.")
+        print("-> 'users': Unique indexes on 'user_id', 'email', 'username' ensured.")
         
     except Exception as e:
-        print(f"Error creating indexes: {e}")
+        print(f"[IndexError] Failed to create DB indexes: {e}")
 
 # ===================================================================
 # 🔽 (추가된 함수 2) 공간 쿼리 (ST_DWithin 대체)

@@ -37,6 +37,8 @@ class SignupRequest(BaseModel):
     password: str = Field(..., min_length=8)
     passwordConfirm: str
 
+    phone: str = Field(..., min_length=11, max_length=11)
+
     name: str | None = Field(default=None, min_length=1, max_length=50)
     disabilityType: DisabilityType
     consent: ConsentCreate
@@ -52,18 +54,19 @@ class SignupResponse(BaseModel):
     user_id: str
     username: str
     email: EmailStr
+    phone: str
     name: str | None
     disabilityType: DisabilityType
     createdAt: datetime
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    username: str = Field(..., min_length=4, max_length=20)
     password: str = Field(..., min_length=6)
 
 
 class UserInLoginResponse(BaseModel):
-    userId: str
+    user_id: str
     username: str
     name: str | None
 
@@ -81,8 +84,10 @@ class TokenPayload(BaseModel):
 
 
 class UserInDB(BaseModel):
+    user_id : str
     username: str
     email: EmailStr
+    phone: str
     hashed_password: str
     name: str | None = None
     disabilityType: DisabilityType

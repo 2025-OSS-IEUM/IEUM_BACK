@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 from pydantic import EmailStr
 import random
 from datetime import datetime, timedelta, timezone
-
+from bson import ObjectId
 # Schemas
 from schemas.auth import (
     SignupRequest, UserInDB,
@@ -62,12 +62,14 @@ async def signup(user_in: SignupRequest):
     user_data = {
         "username": user_in.username,
         "email": user_in.email,
+        "phone": user_in.phone,
         "hashed_password": hashed_password,
         "name": user_in.name,
         "disabilityType": user_in.disabilityType,
         "createdAt": datetime.now(),
         "updatedAt": datetime.now(),
         "is_active": True,
+        "user_id": str(ObjectId()),
     }
 
     new_user = UserInDB(**user_data)
@@ -83,17 +85,20 @@ async def signup(user_in: SignupRequest):
 @router.post("/login", response_model=LoginResponse)
 async def login(login_data: LoginRequest):
 
-    user = await users_collection.find_one({"email": login_data.email})
+    # 🔥 1) email로 찾던 걸 username으로 변경
+    user = await users_collection.find_one({"username": login_data.username})
 
     if not user or not verify_password(login_data.password, user["hashed_password"]):
         raise_error(ErrorCodes.INVALID_CREDENTIALS)
 
-    payload = {"sub": user["email"]}
+    # payload는 email 대신 username 넣어도 되고, email 넣어도 OK
+    payload = {"sub": user["username"]}
+
     access_token = create_access_token(data=payload)
     refresh_token = create_refresh_token(data=payload)
 
     user_info = UserInLoginResponse(
-        userId=str(user["_id"]),
+        user_id=user["user_id"],
         username=user["username"],
         name=user.get("name")
     )
