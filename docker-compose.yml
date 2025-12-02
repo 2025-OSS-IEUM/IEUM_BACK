@@ -10,15 +10,12 @@ services:
       - ./.env
     depends_on:
       - db
-<<<<<<< HEAD
       - redis
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-=======
->>>>>>> 0557621a7f2205829bcfec166f52a83453873b11
 
   db:
     image: mongo:6.0
@@ -30,7 +27,6 @@ services:
     volumes:
       - mongo_data:/data/db
 
-<<<<<<< HEAD
   redis:
     image: redis:7
     command: redis-server --appendonly yes
@@ -42,7 +38,3 @@ services:
 volumes:
   mongo_data:
   redis_data:
-=======
-volumes:
-  mongo_data:
->>>>>>> 0557621a7f2205829bcfec166f52a83453873b11

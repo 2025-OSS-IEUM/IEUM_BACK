@@ -1,9 +1,13 @@
-from fastapi import APIRouter, status, Query
+from fastapi import APIRouter, status, Query, Depends
+from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime
 from typing import List, Optional
 
-from db.database import reports_collection
-from schemas.report_schema import (  # "safe_route_schema" -> 다시 "report_schema"로!
+# DB 관련
+from db.database import reports_collection, users_collection
+
+# 스키마 관련
+from schemas.report_schema import (
     ReportCreate,
     ReportResponse,
     HazardType,
@@ -11,104 +15,102 @@ from schemas.report_schema import (  # "safe_route_schema" -> 다시 "report_sch
     Status,
 )
 
-# errors.py
+# 보안 및 에러 관련
 from core.errors import ErrorCodes, raise_error
+from core.security import verify_token
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
+# 토큰 인증을 위한 스키마 (로그인 URL은 프로젝트 설정에 맞게)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
 
 # ===============================
-# 📌 (B-2) POST /reports
+# 📌 (B-2) POST /reports — 제보 생성 (인증 필요)
 # ===============================
 @router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
-async def create_report(report: ReportCreate):
-    """(B-2) 위험/불편사항 제보 생성"""
+async def create_report(
+    report: ReportCreate,
+    token: str = Depends(oauth2_scheme)  # 👈 토큰 필수
+):
+    """
+    (B-2) 위험/불편사항 제보 생성
+    - 토큰을 통해 작성자를 식별하고 user_id를 함께 저장합니다.
+    """
 
-    # 1) 동일 위치 + 동일 타입 제보 체크
+    # ---------------------------------------
+    # 1. 토큰 검증 및 사용자 식별 (로직 통합)
+    # ---------------------------------------
+    sub = verify_token(token)
+    if sub is None:
+        raise_error(ErrorCodes.INVALID_CREDENTIALS)
+
+    # username으로 user_id 조회
+    user = await users_collection.find_one({"username": sub}, {"user_id": 1, "_id": 0})
+    if not user:
+        raise_error(ErrorCodes.USERNAME_NOT_FOUND)
+    
+    current_user_id = user["user_id"]
+
+    # ---------------------------------------
+    # 2. 중복 제보 체크
+    # ---------------------------------------
     existing = await reports_collection.find_one({
         "location.coordinates": report.location.coordinates,
-        "type": report.type
+        "type": report.type,
+        "status": {"$ne": "RESOLVED"} # (선택사항) 해결된 건은 중복이어도 될 수 있으니 체크 로직 보완 가능
     })
+    
+    # 같은 위치, 같은 타입인데 아직 해결되지 않은 제보가 있다면 중복 처리
     if existing:
         raise_error(ErrorCodes.REPORT_ALREADY_EXISTS)
 
-    # 2) 저장 데이터 구성
+    # ---------------------------------------
+    # 3. 데이터 저장 준비
+    # ---------------------------------------
     new_doc = report.model_dump()
+    new_doc["user_id"] = current_user_id  # 👈 작성자 ID 주입
     new_doc["createdAt"] = datetime.utcnow()
+    new_doc["status"] = Status.REPORTED     # 초기 상태 강제 지정 (스키마 기본값이 있다면 생략 가능)
 
-    # 3) DB 저장
+    # ---------------------------------------
+    # 4. DB 저장
+    # ---------------------------------------
     result = await reports_collection.insert_one(new_doc)
     if not result.inserted_id:
         raise_error(ErrorCodes.SERVER_ERROR)
 
-    # 4) 저장된 문서 다시 조회
+    # ---------------------------------------
+    # 5. 저장된 문서 반환
+    # ---------------------------------------
     inserted = await reports_collection.find_one({"_id": result.inserted_id})
     if not inserted:
         raise_error(ErrorCodes.SERVER_ERROR)
 
-    # 5) 응답 스키마에 맞도록 id 변환
     inserted["id"] = str(inserted["_id"])
     return inserted
 
 
 # ===============================
-# 📌 (B-3) GET /reports
+# 📌 (B-3) GET /reports — 제보 조회 (공개)
 # ===============================
 @router.get("/", response_model=List[ReportResponse], status_code=status.HTTP_200_OK)
 async def get_reports_by_bbox_and_filters(
-    # -------------------------------------
-    # 1. 필수 BBox 범위 설정
-    # -------------------------------------
-    min_lon: float = Query(
-        ..., 
-        description="최소 경도(Longitude). 지도 좌하단 모서리의 경도값입니다.",
-        ge=-180, le=180,
-    ),
-    min_lat: float = Query(
-        ...,
-        description="최소 위도(Latitude). 지도 좌하단 모서리의 위도값입니다.",
-        ge=-90, le=90,
-    ),
-    max_lon: float = Query(
-        ...,
-        description="최대 경도(Longitude). 지도 우상단 모서리의 경도값입니다.",
-        ge=-180, le=180,
-    ),
-    max_lat: float = Query(
-        ...,
-        description="최대 위도(Latitude). 지도 우상단 모서리의 위도값입니다.",
-        ge=-90, le=90,
-    ),
+    min_lon: float = Query(..., ge=-180, le=180),
+    min_lat: float = Query(..., ge=-90, le=90),
+    max_lon: float = Query(..., ge=-180, le=180),
+    max_lat: float = Query(..., ge=-90, le=90),
 
-    # -------------------------------------
-    # 2. 옵션 필터
-    # -------------------------------------
-    type: Optional[HazardType] = Query(
-        None,
-        description="제보 유형 필터. 특정 위험 유형만 조회할 때 사용합니다."
-    ),
-    severity: Optional[Severity] = Query(
-        None,
-        description="심각도(severity) 필터. low / medium / high 중 선택."
-    ),
-    status: Optional[Status] = Query(
-        None,
-        description="제보 상태(status) 필터. 예: pending_review / approved / resolved."
-    ),
+    type: Optional[HazardType] = Query(None),
+    severity: Optional[Severity] = Query(None),
+    status: Optional[Status] = Query(None),
 
-    # -------------------------------------
-    # 3. 페이징
-    # -------------------------------------
-    limit: int = Query(
-        100,
-        description="최대 조회 개수. 기본 100개이며 1~1000 범위로 설정할 수 있습니다.",
-        ge=1, le=1000,
-    ),
+    limit: int = Query(100, ge=1, le=1000),
 ):
-    """(B-3) BBox + 필터 기반 제보 조회"""
+    """(B-3) BBox + 필터 기반 제보 조회 (로그인 없이 조회 가능)"""
 
-    # 1) 기본 필터 설정
     filter_query = {}
+
     if type:
         filter_query["type"] = type
     if severity:
@@ -116,24 +118,22 @@ async def get_reports_by_bbox_and_filters(
     if status:
         filter_query["status"] = status
 
-    # 2) BBox 공간 쿼리 추가
+    # GeoJSON 쿼리
     filter_query["location"] = {
         "$geoWithin": {
             "$box": [
-                [min_lon, min_lat],  # 좌하단
-                [max_lon, max_lat],  # 우상단
+                [min_lon, min_lat],
+                [max_lon, max_lat],
             ]
         }
     }
 
-    # 3) DB 조회
     try:
         cursor = reports_collection.find(filter_query).limit(limit)
         reports = await cursor.to_list(length=limit)
     except Exception:
         raise_error(ErrorCodes.SERVER_ERROR)
 
-    # 4) _id → id 변환
     for r in reports:
         r["id"] = str(r["_id"])
 

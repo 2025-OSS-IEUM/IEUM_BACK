@@ -1,21 +1,54 @@
 from routers import internal 
 from fastapi import FastAPI
-from db.database import client, users_collection, create_db_indexes # DB 객체
-from routers import auth, reports, users         # 라우터 임포트
+from db.database import client, users_collection, create_db_indexes
+from routers import auth, reports, users
 from routers import route
-from routers import safe_route         # D 뼈대
-
-<<<<<<< HEAD
+from routers import safe_route
 from core.logging_middleware import logging_middleware
 
-app = FastAPI()
+# 👇 추가
+from fastapi.openapi.utils import get_openapi
 
+
+app = FastAPI()
 app.middleware("http")(logging_middleware)
 
-=======
-app = FastAPI()
 
->>>>>>> 0557621a7f2205829bcfec166f52a83453873b11
+
+# ======================================================
+# 🔥 Swagger UI Bearer Token 하나만 보이게 설정
+# ======================================================
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="IEUM Backend API",
+        version="1.0.0",
+        description="IEUM API Documentation",
+        routes=app.routes,
+    )
+
+    # OAuth2 제거 + BearerAuth 추가
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }
+
+    # 전체 API 인증 스키마 기본 적용
+    openapi_schema["security"] = [{"BearerAuth": []}]
+
+    app.openapi_schema = openapi_schema
+    return openapi_schema
+
+app.openapi = custom_openapi
+# ======================================================
+
+
+
 # -------------------------
 # 라우터 등록
 # -------------------------
@@ -23,10 +56,10 @@ app.include_router(auth.router)
 app.include_router(reports.router)
 app.include_router(users.router)
 app.include_router(route.router)
-app.include_router(internal.router)     
-app.include_router(safe_route.router)   # D 뼈대
+app.include_router(internal.router)
+app.include_router(safe_route.router)
 
-# 라우터 등록 필수입니다
+
 
 # ---------------------------------
 # 🔥 애플리케이션 시작 이벤트
@@ -40,7 +73,6 @@ async def startup_event():
         return
 
     try:
-        # 연결 테스트
         await client.admin.command("ping")
         print("✅ MongoDB 연결 성공")
 
@@ -77,14 +109,11 @@ async def health_check():
     """DB 연결 상태를 포함한 서버 헬스 체크"""
     db_status = "unknown"
 
-    if client is None:
-        db_status = "client not initialized"
-    else:
-        try:
-            await client.admin.command("ping")
-            db_status = "ok"
-        except Exception as e:
-            db_status = f"failed: {e}"
+    try:
+        await client.admin.command("ping")
+        db_status = "ok"
+    except:
+        db_status = "failed"
 
     return {
         "status": "ok",
