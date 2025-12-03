@@ -1,22 +1,46 @@
-from routers import internal 
 from fastapi import FastAPI
-from db.database import client, users_collection, create_db_indexes
-from routers import auth, reports, users
-from routers import route
-from routers import safe_route
-from core.logging_middleware import logging_middleware
-
-# 👇 추가
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+from db.database import client, users_collection, create_db_indexes
+from core.logging_middleware import logging_middleware
+from routers import auth, reports, users, route, safe_route, internal
 
 
 app = FastAPI()
+
+
+# ------------------------------------------------------
+# 🔥 ProxyHeadersMiddleware (ngrok HTTPS 환경 필수)
+# ------------------------------------------------------
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts=["*"]
+)
+
+
+# ------------------------------------------------------
+# 🔥 CORS (팀원 테스트용)
+# ------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ------------------------------------------------------
+# 🔥 로깅 미들웨어
+# ------------------------------------------------------
 app.middleware("http")(logging_middleware)
 
 
-
 # ======================================================
-# 🔥 Swagger UI Bearer Token 하나만 보이게 설정
+# 🔥 Swagger UI Bearer Token만 보이게 + HTTPS 호환
 # ======================================================
 def custom_openapi():
     if app.openapi_schema:
@@ -29,7 +53,7 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    # OAuth2 제거 + BearerAuth 추가
+    # JWT BearerAuth 정의
     openapi_schema["components"]["securitySchemes"] = {
         "BearerAuth": {
             "type": "http",
@@ -38,15 +62,15 @@ def custom_openapi():
         }
     }
 
-    # 전체 API 인증 스키마 기본 적용
+    # 전체 API 기본 인증 적용
     openapi_schema["security"] = [{"BearerAuth": []}]
 
     app.openapi_schema = openapi_schema
     return openapi_schema
 
+
 app.openapi = custom_openapi
 # ======================================================
-
 
 
 # -------------------------
@@ -58,7 +82,6 @@ app.include_router(users.router)
 app.include_router(route.router)
 app.include_router(internal.router)
 app.include_router(safe_route.router)
-
 
 
 # ---------------------------------
@@ -99,9 +122,10 @@ async def shutdown_event():
 # -------------------------
 # 기본 라우트
 # -------------------------
-@app.get("/")
-def read_root():
-    return {"message": "IEUM API v1 (FastAPI + MongoDB)"}
+# 💛 ngrok 주소 입력하면 자동으로 /docs로 이동하도록 변경
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/internal/health")
