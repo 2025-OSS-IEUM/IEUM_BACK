@@ -23,15 +23,18 @@ class GeoJSONPoint(BaseModel):
         example=[127.043, 37.501]
     )
 
+
 # --- 요청용 모델 (POST Body) ---
 class ReportCreate(BaseModel):
     type: HazardType
     description: str = Field(..., max_length=200)
     location: GeoJSONPoint
-    photoUrls: Optional[List[str]] = None
-    detectedAt: Optional[datetime] = None
 
-    # 🔥 이제 severity는 숫자로 고정 (1~5)
+    # 🔥 키 생략 가능 + 값 없어도 OK
+    photoUrls: Optional[List[str]] = Field(default=None)
+    detectedAt: Optional[datetime] = Field(default=None)
+
+    # 🔥 severity는 숫자 고정 (1~5)
     severity: int = Field(
         3,
         ge=1,
@@ -47,10 +50,13 @@ class ReportCreate(BaseModel):
                 "type": "sidewalk_damage",
                 "description": "보도블록이 심하게 파손되어 휠체어 이동이 어렵습니다.",
                 "location": {"type": "Point", "coordinates": [127.043, 37.501]},
-                "severity": 3
+                "severity": 3,
+                "photoUrls": ["file://example.jpg"],
+                "detectedAt": None
             }
         }
     )
+
 
 # --- 응답용 모델 ---
 class ReportResponse(ReportCreate):

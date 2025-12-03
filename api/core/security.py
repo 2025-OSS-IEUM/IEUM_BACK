@@ -59,23 +59,23 @@ def create_refresh_token(data: dict) -> str:
 # 3. Verify Token (🔥 완전 수정된 정답 버전)
 # ==================================
 
-def verify_token(token: str):
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+def verify_token(token: str = Depends(oauth2_scheme)):
     """
-    Verify JWT and return the full decoded payload:
-    {
-        "sub": username,
-        "user_id": "...",
-        "exp": ...
-    }
+    Dependency version — FastAPI가 Authorization: Bearer <token> 을 자동으로 가져옴
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
-        # 필수 필드 확인
         if "sub" not in payload or "user_id" not in payload:
-            return None
+            raise HTTPException(status_code=401, detail="Invalid token")
 
-        return payload   # ⭐ dict 전체 반환해야 FastAPI Depends 정상 작동
+        return payload  # {"sub": ..., "user_id": ...}
 
     except JWTError:
-        return None
+        raise HTTPException(status_code=401, detail="Invalid token")
