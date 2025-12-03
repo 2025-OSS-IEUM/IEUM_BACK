@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from pydantic import EmailStr
 
 from .core import (
     SECRET_KEY,
@@ -56,18 +55,27 @@ def create_refresh_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def verify_token(token: str) -> str | None:
+# ==================================
+# 3. Verify Token (🔥 완전 수정된 정답 버전)
+# ==================================
+
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+def verify_token(token: str = Depends(oauth2_scheme)):
     """
-    Verify JWT and return its 'sub' field as plain string.
+    Dependency version — FastAPI가 Authorization: Bearer <token> 을 자동으로 가져옴
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        sub = payload.get("sub")
 
-        if not sub:
-            return None
+        if "sub" not in payload or "user_id" not in payload:
+            raise HTTPException(status_code=401, detail="Invalid token")
 
-        return sub   # ⭐ EmailStr 제거 (username 그대로 반환)
+        return payload  # {"sub": ..., "user_id": ...}
 
     except JWTError:
-        return None
+        raise HTTPException(status_code=401, detail="Invalid token")

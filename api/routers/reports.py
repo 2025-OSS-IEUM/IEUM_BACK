@@ -1,98 +1,70 @@
+# api/routers/reports.py
+
 from fastapi import APIRouter, status, Query, Depends
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime
 from typing import List, Optional
 
-# DB 관련
 from db.database import reports_collection, users_collection
-
-# 스키마 관련
 from schemas.report_schema import (
     ReportCreate,
     ReportResponse,
     HazardType,
-    Severity,
     Status,
 )
-
-# 보안 및 에러 관련
 from core.errors import ErrorCodes, raise_error
 from core.security import verify_token
 
+
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
-# 토큰 인증을 위한 스키마 (로그인 URL은 프로젝트 설정에 맞게)
+# 🔥 다시 선언해야 FastAPI가 Authorization 헤더에서 token을 추출함
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 # ===============================
-# 📌 (B-2) POST /reports — 제보 생성 (인증 필요)
+# 📌 (B-2) POST /reports — 제보 생성
 # ===============================
 @router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
 async def create_report(
     report: ReportCreate,
-    token: str = Depends(oauth2_scheme)  # 👈 토큰 필수
+    current_user = Depends(verify_token)   # 🔥 인증 강제 적용
 ):
-    """
-    (B-2) 위험/불편사항 제보 생성
-    - 토큰을 통해 작성자를 식별하고 user_id를 함께 저장합니다.
-    """
+    # current_user = {"sub": username, "user_id": "...", "exp": ...}
+    username = current_user["sub"]
 
-    # ---------------------------------------
-    # 1. 토큰 검증 및 사용자 식별 (로직 통합)
-    # ---------------------------------------
-    sub = verify_token(token)
-    if sub is None:
-        raise_error(ErrorCodes.INVALID_CREDENTIALS)
-
-    # username으로 user_id 조회
-    user = await users_collection.find_one({"username": sub}, {"user_id": 1, "_id": 0})
+    # username → user_id 조회
+    user = await users_collection.find_one({"username": username}, {"user_id": 1})
     if not user:
         raise_error(ErrorCodes.USERNAME_NOT_FOUND)
-    
-    current_user_id = user["user_id"]
 
-    # ---------------------------------------
-    # 2. 중복 제보 체크
-    # ---------------------------------------
+    user_id = user["user_id"]
+
+    # 중복 제보 체크
     existing = await reports_collection.find_one({
         "location.coordinates": report.location.coordinates,
         "type": report.type,
-        "status": {"$ne": "RESOLVED"} # (선택사항) 해결된 건은 중복이어도 될 수 있으니 체크 로직 보완 가능
+        "status": {"$ne": "resolved"}
     })
-    
-    # 같은 위치, 같은 타입인데 아직 해결되지 않은 제보가 있다면 중복 처리
     if existing:
         raise_error(ErrorCodes.REPORT_ALREADY_EXISTS)
 
-    # ---------------------------------------
-    # 3. 데이터 저장 준비
-    # ---------------------------------------
+    # 저장
     new_doc = report.model_dump()
-    new_doc["user_id"] = current_user_id  # 👈 작성자 ID 주입
+    new_doc["severity"] = report.severity
+    new_doc["user_id"] = user_id
     new_doc["createdAt"] = datetime.utcnow()
-    new_doc["status"] = Status.REPORTED     # 초기 상태 강제 지정 (스키마 기본값이 있다면 생략 가능)
+    new_doc["status"] = "pending_review"
 
-    # ---------------------------------------
-    # 4. DB 저장
-    # ---------------------------------------
     result = await reports_collection.insert_one(new_doc)
-    if not result.inserted_id:
-        raise_error(ErrorCodes.SERVER_ERROR)
-
-    # ---------------------------------------
-    # 5. 저장된 문서 반환
-    # ---------------------------------------
     inserted = await reports_collection.find_one({"_id": result.inserted_id})
-    if not inserted:
-        raise_error(ErrorCodes.SERVER_ERROR)
 
     inserted["id"] = str(inserted["_id"])
     return inserted
 
 
 # ===============================
-# 📌 (B-3) GET /reports — 제보 조회 (공개)
+# 📌 (B-3) GET /reports — 제보 조회
 # ===============================
 @router.get("/", response_model=List[ReportResponse], status_code=status.HTTP_200_OK)
 async def get_reports_by_bbox_and_filters(
@@ -102,23 +74,20 @@ async def get_reports_by_bbox_and_filters(
     max_lat: float = Query(..., ge=-90, le=90),
 
     type: Optional[HazardType] = Query(None),
-    severity: Optional[Severity] = Query(None),
+    severity: Optional[int] = Query(None, ge=1, le=5),
     status: Optional[Status] = Query(None),
 
     limit: int = Query(100, ge=1, le=1000),
 ):
-    """(B-3) BBox + 필터 기반 제보 조회 (로그인 없이 조회 가능)"""
-
     filter_query = {}
 
     if type:
         filter_query["type"] = type
-    if severity:
+    if severity is not None:
         filter_query["severity"] = severity
     if status:
         filter_query["status"] = status
 
-    # GeoJSON 쿼리
     filter_query["location"] = {
         "$geoWithin": {
             "$box": [
