@@ -92,7 +92,10 @@ async def login(login_data: LoginRequest):
         raise_error(ErrorCodes.INVALID_CREDENTIALS)
 
     # payload는 email 대신 username 넣어도 되고, email 넣어도 OK
-    payload = {"sub": user["username"]}
+    payload = {
+        "sub": user["username"],
+        "user_id": user["user_id"]
+        }
 
     access_token = create_access_token(data=payload)
     refresh_token = create_refresh_token(data=payload)
