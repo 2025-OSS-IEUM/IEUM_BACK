@@ -9,7 +9,7 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 HazardType = Literal[
     "sidewalk_damage", "construction", "missing_crosswalk", "no_tactile", "etc"
 ]
-Severity = Literal["low", "medium", "high"]
+
 Status = Literal["pending_review", "approved", "resolved"]
 
 # --- GeoJSON 포맷 ---
@@ -25,37 +25,40 @@ class GeoJSONPoint(BaseModel):
 
 # --- 요청용 모델 (POST Body) ---
 class ReportCreate(BaseModel):
-    type: HazardType = Field(..., description="Type of hazard")
-    description: str = Field(..., max_length=200, description="Short description of the hazard")
+    type: HazardType
+    description: str = Field(..., max_length=200)
     location: GeoJSONPoint
-    photoUrls: Optional[List[str]] = Field(None, description="Optional photo URLs")
-    detectedAt: Optional[datetime] = Field(None, description="Time when hazard was detected")
-    severity: Severity = Field("medium", description="Severity level (low/medium/high)")
-    status: Status = Field("pending_review", description="Current review status")
+    photoUrls: Optional[List[str]] = None
+    detectedAt: Optional[datetime] = None
 
-    # 스키마 예시를 보여주기 위한 설정
+    # 🔥 이제 severity는 숫자로 고정 (1~5)
+    severity: int = Field(
+        3,
+        ge=1,
+        le=5,
+        description="Severity level as integer (1~5)"
+    )
+
+    status: Status = "pending_review"
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "type": "sidewalk_damage",
                 "description": "보도블록이 심하게 파손되어 휠체어 이동이 어렵습니다.",
                 "location": {"type": "Point", "coordinates": [127.043, 37.501]},
-                "severity": "high"
+                "severity": 3
             }
         }
     )
 
-# --- 응답용 모델 (Response) ---
+# --- 응답용 모델 ---
 class ReportResponse(ReportCreate):
-    # alias="_id"를 통해 DB의 _id 값을 id 필드로 매핑합니다.
-    id: Optional[PyObjectId] = Field(None, alias="_id", description="Unique identifier (MongoDB ObjectId)")
-    
-    # 🌟 추가된 부분: 작성자 ID
-    user_id: str = Field(..., description="ID of the user who created the report")
-    
-    createdAt: datetime = Field(..., description="Timestamp when report was created")
+    id: Optional[PyObjectId] = Field(None, alias="_id")
+    user_id: str
+    createdAt: datetime
 
     model_config = ConfigDict(
-        populate_by_name=True,       # alias 이름(_id)으로도 값 할당 허용
-        arbitrary_types_allowed=True # ObjectId 등 임의 타입 허용
+        populate_by_name=True,
+        arbitrary_types_allowed=True
     )

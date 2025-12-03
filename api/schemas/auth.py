@@ -88,7 +88,7 @@ class UserInDB(BaseModel):
     username: str
     email: EmailStr
     phone: str
-    hashed_password: str
+    password_hash: str
     name: str | None = None
     disabilityType: DisabilityType
     createdAt: datetime = Field(default_factory=datetime.now)

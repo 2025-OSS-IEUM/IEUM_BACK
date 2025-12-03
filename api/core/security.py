@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from pydantic import EmailStr
 
 from .core import (
     SECRET_KEY,
@@ -56,18 +55,27 @@ def create_refresh_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def verify_token(token: str) -> str | None:
+# ==================================
+# 3. Verify Token (🔥 완전 수정된 정답 버전)
+# ==================================
+
+def verify_token(token: str):
     """
-    Verify JWT and return its 'sub' field as plain string.
+    Verify JWT and return the full decoded payload:
+    {
+        "sub": username,
+        "user_id": "...",
+        "exp": ...
+    }
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        sub = payload.get("sub")
 
-        if not sub:
+        # 필수 필드 확인
+        if "sub" not in payload or "user_id" not in payload:
             return None
 
-        return sub   # ⭐ EmailStr 제거 (username 그대로 반환)
+        return payload   # ⭐ dict 전체 반환해야 FastAPI Depends 정상 작동
 
     except JWTError:
         return None

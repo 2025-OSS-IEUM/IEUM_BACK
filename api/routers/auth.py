@@ -3,6 +3,7 @@ from pydantic import EmailStr
 import random
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
+
 # Schemas
 from schemas.auth import (
     SignupRequest, UserInDB,
@@ -57,13 +58,13 @@ async def signup(user_in: SignupRequest):
         raise_error(ErrorCodes.EMAIL_ALREADY_EXISTS)
 
     # 비밀번호 해싱
-    hashed_password = hash_password(user_in.password)
+    password_hash = hash_password(user_in.password)   # ✔ 통일된 필드명
 
     user_data = {
         "username": user_in.username,
         "email": user_in.email,
         "phone": user_in.phone,
-        "hashed_password": hashed_password,
+        "password_hash": password_hash,               # ✔ 수정됨
         "name": user_in.name,
         "disabilityType": user_in.disabilityType,
         "createdAt": datetime.now(),
@@ -85,17 +86,17 @@ async def signup(user_in: SignupRequest):
 @router.post("/login", response_model=LoginResponse)
 async def login(login_data: LoginRequest):
 
-    # 🔥 1) email로 찾던 걸 username으로 변경
+    # 🔥 username 기준으로 조회
     user = await users_collection.find_one({"username": login_data.username})
 
-    if not user or not verify_password(login_data.password, user["hashed_password"]):
+    # ✔ password_hash로 통일되어 있으므로 이대로 두면 완벽함
+    if not user or not verify_password(login_data.password, user["password_hash"]):
         raise_error(ErrorCodes.INVALID_CREDENTIALS)
 
-    # payload는 email 대신 username 넣어도 되고, email 넣어도 OK
     payload = {
         "sub": user["username"],
         "user_id": user["user_id"]
-        }
+    }
 
     access_token = create_access_token(data=payload)
     refresh_token = create_refresh_token(data=payload)
@@ -209,12 +210,13 @@ async def confirm_password_reset(request: PasswordResetConfirmRequest):
         )
         raise_error(ErrorCodes.CODE_EXPIRED)
 
-    hashed_password = hash_password(request.newPassword)
+    password_hash = hash_password(request.newPassword)
 
+    # ✔ 여기서도 필드명 통일
     await users_collection.update_one(
         {"username": request.username},
         {
-            "$set": {"hashed_password": hashed_password},
+            "$set": {"password_hash": password_hash},   # ✔ 수정됨
             "$unset": {
                 "passwordResetCode": "",
                 "passwordResetExpires": ""
@@ -223,4 +225,3 @@ async def confirm_password_reset(request: PasswordResetConfirmRequest):
     )
 
     return PasswordResetConfirmResponse()
-
