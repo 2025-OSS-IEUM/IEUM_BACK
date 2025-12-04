@@ -26,31 +26,27 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 # ===============================
-# 📌 (B-2) POST /reports — 제보 생성 (인증 필요)
+# 📌 (B-2) POST /reports — 제보 생성 
 # ===============================
 @router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
-async def create_report(
-    report: ReportCreate,
-    token: str = Depends(oauth2_scheme)  # 👈 토큰 필수
-):
-    """
-    (B-2) 위험/불편사항 제보 생성
-    - 토큰을 통해 작성자를 식별하고 user_id를 함께 저장합니다.
-    """
+async def create_report(report: ReportCreate):
 
-    # ---------------------------------------
-    # 1. 토큰 검증 및 사용자 식별 (로직 통합)
-    # ---------------------------------------
-    sub = verify_token(token)
-    if sub is None:
-        raise_error(ErrorCodes.INVALID_CREDENTIALS)
+    existing = await reports_collection.find_one({
+        "location.coordinates": report.location.coordinates,
+        "type": report.type
+    })
+    if existing:
+        raise_error(ErrorCodes.REPORT_ALREADY_EXISTS)
 
-    # username으로 user_id 조회
-    user = await users_collection.find_one({"username": sub}, {"user_id": 1, "_id": 0})
-    if not user:
-        raise_error(ErrorCodes.USERNAME_NOT_FOUND)
-    
-    current_user_id = user["user_id"]
+    new_doc = report.model_dump()
+    new_doc["createdAt"] = datetime.utcnow()
+
+    result = await reports_collection.insert_one(new_doc)
+    inserted = await reports_collection.find_one({"_id": result.inserted_id})
+
+    inserted["id"] = str(inserted["_id"])
+    return inserted
+
 
     # ---------------------------------------
     # 2. 중복 제보 체크

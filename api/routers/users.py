@@ -66,33 +66,19 @@ async def delete_user():
 
 
 # ======================================
+# 📌 GET /users/me/reports — 내가 제보한 report 조회 (수정됨)
+# ======================================
+# ======================================
 # 📌 GET /users/me/reports — 내가 제보한 report 조회
 # ======================================
-
 @router.get("/me/reports", status_code=status.HTTP_200_OK)
-async def get_my_reports(current_user = Depends(verify_token)):
-    """
-    내가 제보한 모든 report 조회
-    - 전역 BearerAuth 기반
-    - verify_token으로 이미 인증 완료됨
-    """
+async def get_my_reports():
 
-    # verify_token → {"sub": username, "user_id": ...}
-    username = current_user["sub"]
+    docs = await reports_collection.find({}).to_list(length=None)
 
-    # DB에서 user_id 가져오기
-    user = await users_collection.find_one({"username": username}, {"user_id": 1})
-    if not user:
-        raise_error(ErrorCodes.USERNAME_NOT_FOUND)
-
-    user_id = user["user_id"]
-
-    # 본인 report 조회
-    docs = await reports_collection.find({"user_id": user_id}).to_list(length=None)
-
-    # ObjectId → 문자열 변환
     for r in docs:
         if "_id" in r:
-            r["id"] = str(r.pop("_id"))
+            r["id"] = str(r["_id"])
+            r.pop("_id", None)
 
     return docs

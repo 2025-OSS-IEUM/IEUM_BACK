@@ -47,15 +47,15 @@ class ReportCreate(BaseModel):
 
 # --- 응답용 모델 (Response) ---
 class ReportResponse(ReportCreate):
-    # alias="_id"를 통해 DB의 _id 값을 id 필드로 매핑합니다.
-    id: Optional[PyObjectId] = Field(None, alias="_id", description="Unique identifier (MongoDB ObjectId)")
-    
-    # 🌟 추가된 부분: 작성자 ID
-    user_id: str = Field(..., description="ID of the user who created the report")
-    
+    id: Optional[PyObjectId] = Field(
+        None,
+        alias="_id",
+        description="Unique identifier (MongoDB ObjectId)"
+    )
+
     createdAt: datetime = Field(..., description="Timestamp when report was created")
 
     model_config = ConfigDict(
-        populate_by_name=True,       # alias 이름(_id)으로도 값 할당 허용
-        arbitrary_types_allowed=True # ObjectId 등 임의 타입 허용
+        populate_by_name=True,
+        arbitrary_types_allowed=True
     )

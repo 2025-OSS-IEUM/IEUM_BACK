@@ -48,22 +48,19 @@ async def get_auth_status():
 @router.post("/signup", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
 async def signup(user_in: SignupRequest):
 
-    # 아이디 중복
     if await users_collection.find_one({"username": user_in.username}):
         raise_error(ErrorCodes.USERNAME_ALREADY_EXISTS)
 
-    # 이메일 중복
     if await users_collection.find_one({"email": user_in.email}):
         raise_error(ErrorCodes.EMAIL_ALREADY_EXISTS)
 
-    # 비밀번호 해싱
     hashed_password = hash_password(user_in.password)
 
     user_data = {
         "username": user_in.username,
         "email": user_in.email,
         "phone": user_in.phone,
-        "hashed_password": hashed_password,
+        "password_hash": hashed_password,            # ← 수정된 부분
         "name": user_in.name,
         "disabilityType": user_in.disabilityType,
         "createdAt": datetime.now(),
@@ -85,17 +82,15 @@ async def signup(user_in: SignupRequest):
 @router.post("/login", response_model=LoginResponse)
 async def login(login_data: LoginRequest):
 
-    # 🔥 1) email로 찾던 걸 username으로 변경
     user = await users_collection.find_one({"username": login_data.username})
 
-    if not user or not verify_password(login_data.password, user["hashed_password"]):
+    if not user or not verify_password(login_data.password, user["password_hash"]):
         raise_error(ErrorCodes.INVALID_CREDENTIALS)
 
-    # payload는 email 대신 username 넣어도 되고, email 넣어도 OK
+    # ✔ JWT payload에서 user_id 제거
     payload = {
-        "sub": user["username"],
-        "user_id": user["user_id"]
-        }
+        "sub": user["username"]
+    }
 
     access_token = create_access_token(data=payload)
     refresh_token = create_refresh_token(data=payload)
@@ -112,7 +107,6 @@ async def login(login_data: LoginRequest):
         expiresIn=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=user_info
     )
-
 
 # --------------------------------------------------------
 # 아이디 중복 확인
@@ -195,7 +189,6 @@ async def confirm_password_reset(request: PasswordResetConfirmRequest):
     stored_code = user.get("passwordResetCode")
     expiry_time = user.get("passwordResetExpires")
 
-    # 🔥 MongoDB가 tzinfo를 지워버리는 경우 UTC로 강제 보정
     if expiry_time and expiry_time.tzinfo is None:
         expiry_time = expiry_time.replace(tzinfo=timezone.utc)
 
@@ -214,7 +207,7 @@ async def confirm_password_reset(request: PasswordResetConfirmRequest):
     await users_collection.update_one(
         {"username": request.username},
         {
-            "$set": {"hashed_password": hashed_password},
+            "$set": {"password_hash": hashed_password},   # ← 이미 올바르게 수정됨
             "$unset": {
                 "passwordResetCode": "",
                 "passwordResetExpires": ""
@@ -223,4 +216,3 @@ async def confirm_password_reset(request: PasswordResetConfirmRequest):
     )
 
     return PasswordResetConfirmResponse()
-

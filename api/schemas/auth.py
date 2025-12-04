@@ -1,5 +1,3 @@
-# api/schemas/auth.py
-
 from pydantic import BaseModel, EmailStr, Field, validator, model_validator
 from datetime import datetime
 from enum import Enum
@@ -79,8 +77,11 @@ class LoginResponse(BaseModel):
     user: UserInLoginResponse
 
 
+# ===============================
+#  🔥 최소 변경: username 기반 JWT에 맞춤
+# ===============================
 class TokenPayload(BaseModel):
-    sub: EmailStr  # email
+    sub: str   # EmailStr → str 로 변경 (username 저장용)
 
 
 class UserInDB(BaseModel):
@@ -88,7 +89,7 @@ class UserInDB(BaseModel):
     username: str
     email: EmailStr
     phone: str
-    hashed_password: str
+    password_hash: str
     name: str | None = None
     disabilityType: DisabilityType
     createdAt: datetime = Field(default_factory=datetime.now)
