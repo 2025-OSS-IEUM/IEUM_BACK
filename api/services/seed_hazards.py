@@ -10,7 +10,7 @@ SEED_HAZARDS = [
     {
         "type": "construction",
         "severity": 3,
-        "status": "approved",   # ⭐ 추가됨
+        "status": "approved",  
         "location": {
             "type": "Point",
             "coordinates": [126.988205, 37.551229]

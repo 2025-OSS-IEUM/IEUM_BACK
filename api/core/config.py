@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     # (FIXED) .env의 ACCESS_TOKEN_EXPIRE_MINUTES를 읽어오도록 선언
     ACCESS_TOKEN_EXPIRE_MINUTES: int 
 
-    # 카카오 API 키 .env에서 읽어옴
-    KAKAO_API_KEY: str
+    # TMAP API 키 선언 
+    TMAP_API_KEY: str
 
     # 캐시(Redis) 관련 설정
     REDIS_HOST: str = "redis"
