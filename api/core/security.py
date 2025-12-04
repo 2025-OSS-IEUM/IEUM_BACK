@@ -56,18 +56,22 @@ def create_refresh_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def verify_token(token: str) -> str | None:
+def verify_token(token: str) -> str | None: # 👈 반환 타입을 EmailStr에서 str로 변경
     """
-    Verify JWT and return its 'sub' field as plain string.
+    토큰을 검증하고, 유효하다면 Payload의 'sub' 값을 반환합니다.
+    (이 함수는 나중에 '/users/me' 같은 인증이 필요한 API에서 사용됩니다)
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        sub = payload.get("sub")
-
-        if not sub:
-            return None
-
-        return sub   # ⭐ EmailStr 제거 (username 그대로 반환)
-
+        
+        # sub의 타입 힌트에서 EmailStr 제거
+        sub: str | None = payload.get("sub") 
+        
+        if sub is None:
+            return None # 'sub'가 없으면 유효하지 않은 토큰
+            
+        return sub # ⭐ 이제 유저 이름(username)이 반환됩니다.
+    
     except JWTError:
+        # 토큰이 만료되었거나 형식이 잘못된 경우
         return None
