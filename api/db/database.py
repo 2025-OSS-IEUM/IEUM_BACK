@@ -50,7 +50,7 @@ async def find_hazards_near_coordinates(
 ) -> List[Dict[str, Any]]:
 
     query = {
-        "status": "approved",
+        #"status": "approved",
         "location": {
             "$nearSphere": {
                 "$geometry": {

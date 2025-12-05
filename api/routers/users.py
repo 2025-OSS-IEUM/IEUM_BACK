@@ -66,9 +66,6 @@ async def delete_user():
 
 
 # ======================================
-# 📌 GET /users/me/reports — 내가 제보한 report 조회 (수정됨)
-# ======================================
-# ======================================
 # 📌 GET /users/me/reports — 내가 제보한 report 조회
 # ======================================
 @router.get("/me/reports", status_code=status.HTTP_200_OK)
