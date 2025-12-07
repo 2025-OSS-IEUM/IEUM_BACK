@@ -1,0 +1,66 @@
+# ---------------------
+# Python Cache
+# ---------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ---------------------
+# Virtual Environments
+# ---------------------
+venv/
+.venv/
+env/
+ENV/
+
+# ---------------------
+# Environment Files
+# ---------------------
+.env
+*.env
+
+# ---------------------
+# IDE / Editor
+# ---------------------
+.vscode/
+.idea/
+
+# ---------------------
+# OS Files
+# ---------------------
+.DS_Store
+Thumbs.db
+
+# ---------------------
+# Docker
+# ---------------------
+*.log
+docker-compose.override.yml
+
+# ---------------------
+# Jupyter / Notebook
+# ---------------------
+.ipynb_checkpoints/
+
+# ---------------------
+# Type Checker / Tools
+# ---------------------
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# ---------------------
+# Build / Distribution
+# ---------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---------------------
+# Redis / Mongo Data (Docker volume에서 관리)
+# ---------------------
+redis_data/
+mongo_data/

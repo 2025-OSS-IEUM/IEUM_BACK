@@ -1,0 +1,148 @@
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+from db.database import client, users_collection, create_db_indexes
+from core.logging_middleware import logging_middleware
+from routers import auth, reports, users, route, safe_route, internal
+
+
+app = FastAPI()
+
+
+# ------------------------------------------------------
+# 🔥 ProxyHeadersMiddleware (ngrok HTTPS 환경 필수)
+# ------------------------------------------------------
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts=["*"]
+)
+
+
+# ------------------------------------------------------
+# 🔥 CORS (팀원 테스트용)
+# ------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ------------------------------------------------------
+# 🔥 로깅 미들웨어
+# ------------------------------------------------------
+app.middleware("http")(logging_middleware)
+
+
+# ======================================================
+# 🔥 Swagger UI Bearer Token만 보이게 + HTTPS 호환
+# ======================================================
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="IEUM Backend API",
+        version="1.0.0",
+        description="IEUM API Documentation",
+        routes=app.routes,
+    )
+
+    # JWT BearerAuth 정의
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }
+
+    # 전체 API 기본 인증 적용
+    openapi_schema["security"] = [{"BearerAuth": []}]
+
+    app.openapi_schema = openapi_schema
+    return openapi_schema
+
+
+app.openapi = custom_openapi
+# ======================================================
+
+
+# -------------------------
+# 라우터 등록
+# -------------------------
+app.include_router(auth.router)
+app.include_router(reports.router)
+app.include_router(users.router)
+app.include_router(route.router)
+app.include_router(internal.router)
+app.include_router(safe_route.router)
+
+
+# ---------------------------------
+# 🔥 애플리케이션 시작 이벤트
+# ---------------------------------
+@app.on_event("startup")
+async def startup_event():
+    print("FastAPI 애플리케이션 시작")
+
+    if client is None:
+        print("❌ MongoDB 클라이언트가 초기화되지 않았습니다.")
+        return
+
+    try:
+        await client.admin.command("ping")
+        print("✅ MongoDB 연결 성공")
+
+        if users_collection is None:
+            print("❌ users 컬렉션이 초기화되지 않았습니다.")
+            return
+
+        await create_db_indexes()
+
+    except Exception as e:
+        print(f"❌ MongoDB 연결 또는 인덱스 설정 실패: {e}")
+
+
+# ---------------------------------
+# 🔥 애플리케이션 종료 이벤트
+# ---------------------------------
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("FastAPI 애플리케이션 종료")
+    if client is not None:
+        client.close()
+
+
+# -------------------------
+# 기본 라우트
+# -------------------------
+# 💛 ngrok 주소 입력하면 자동으로 /docs로 이동하도록 변경
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url="/docs")
+
+
+@app.get("/internal/health")
+async def health_check():
+    """DB 연결 상태를 포함한 서버 헬스 체크"""
+    db_status = "unknown"
+
+    try:
+        await client.admin.command("ping")
+        db_status = "ok"
+    except:
+        db_status = "failed"
+
+    return {
+        "status": "ok",
+        "details": {"db_connection": db_status}
+    }
+
+
+print("[api/main.py] FastAPI 앱 초기화 완료. 라우터 로드됨.")
